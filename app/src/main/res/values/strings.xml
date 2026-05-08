@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">HTTP 70MAI dashcam transfer</string>
+    <string name="btn_start">Старт</string>
+    <string name="btn_stat">Стат</string>
+    <string name="btn_token">Токен</string>
+    <string name="btn_info">Инфо</string>
+    <string name="btn_stop">Стоп</string>
+    <string name="btn_no_sleep">Не заспива</string>
+    <string name="btn_album">Албум</string>
+    <string name="btn_inject">Инжект</string>
+    <string name="cam_settings_title">Настройки за Камера</string>
+    <string name="cam_ip_hint">Напр. 192.168.1.1</string>
+    <string name="cam_user_hint">Потребителски номер за HTTP</string>
+    <string name="cam_pass_hint">Ключ за HTTP</string>
+    <string name="archive_settings_title">Настройки за Архив (SFTP)</string>
+    <string name="archive_ip_hint">IP адрес на SFTP сървъра</string>
+    <string name="archive_user_hint">Потребителско име за SFTP</string>
+    <string name="archive_pass_hint">Парола за SFTP</string>
+    <string name="archive_path_hint">Път за качване, напр. /backups/</string>
+</resources>

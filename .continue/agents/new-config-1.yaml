@@ -1,0 +1,30 @@
+# This is an example configuration file
+# To learn more, see the full config.yaml reference: https://docs.continue.dev/reference
+
+name: Example Config
+version: 1.0.0
+schema: v1
+
+# Define which models can be used
+# https://docs.continue.dev/customization/models
+models:
+  - name: Qwen 2.5 Coder 32B
+    provider: openai
+    model: Qwen2.5-Coder-32B-Instruct-Q6_K.gguf
+    api_base: http://127.0.0.1:8080/v1
+    roles:
+      - chat
+      - edit
+      - apply
+
+tab_autocomplete_model:
+  name: Qwen 2.5 Coder Auto
+  provider: openai
+  model: Qwen2.5-Coder-32B-Instruct-Q6_K.gguf
+  api_base: http://127.0.0.1:8080/
+
+allow_anonymous_telemetry: false
+# MCP Servers that Continue can access
+# https://docs.continue.dev/customization/mcp-tools
+mcpServers:
+  - uses: anthropic/memory-mcp

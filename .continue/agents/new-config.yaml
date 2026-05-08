@@ -1,0 +1,22 @@
+models:
+  - name: Qwen 2.5 Coder 32B
+    provider: openai
+    model: Qwen2.5-Coder-32B-Instruct-Q6_K.gguf
+    apiBase: http://127.0.0.1:8080/v1
+    roles:
+      - chat
+      - edit
+      - apply
+
+tabAutocompleteModel:
+  name: Qwen 2.5 Coder Auto
+  provider: openai
+  model: Qwen2.5-Coder-32B-Instruct-Q6_K.gguf
+  apiBase: http://127.0.0.1:8080/v1
+
+embeddingsProvider:
+  provider: openai
+  model: Qwen2.5-Coder-32B-Instruct-Q6_K.gguf
+  apiBase: http://127.0.0.1:8080/v1
+
+allowAnonymousTelemetry: false
