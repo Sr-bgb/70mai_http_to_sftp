@@ -23,7 +23,7 @@ The app uses `OkHttpClient` with custom `SocketFactory` binding. When a target U
 
 ### File Management
 1. **Camera Stage**: Scans all CGI types (0-15). Filters out files currently being recorded. Downloads via HTTP.
-2. **Local Stage**: Files are stored in `/Android/data/com.example.camhttp/files/camera/` preserving the original directory structure (e.g., `/Normal/Front/`).
+2. **Local Stage**: Files are stored in `/Android/data/com.lz1bgb.camhttp/files/camera/` preserving the original directory structure (e.g., `/Normal/Front/`).
 3. **Archive Stage**: If the camera is not in range, the app automatically switches to SFTP mode and uploads the local files to the configured server, deleting them locally upon success.
 
 ## ⚖️ Licensing

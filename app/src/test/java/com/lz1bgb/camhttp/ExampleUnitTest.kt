@@ -1,4 +1,4 @@
-package com.example.camhttp
+package com.lz1bgb.camhttp
 
 import org.junit.Test
 

@@ -26,7 +26,7 @@
 
 
         <activity
-            android:name=".SettingsActivity"
+            android:name="com.lz1bgb.camhttp.SettingsActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
@@ -37,7 +37,7 @@
         </activity>
 
         <service
-            android:name=".FileTransferService"
+            android:name="com.lz1bgb.camhttp.FileTransferService"
             android:foregroundServiceType="dataSync"
             android:enabled="true"
             android:exported="false" />

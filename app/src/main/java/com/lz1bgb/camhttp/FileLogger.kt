@@ -1,4 +1,4 @@
-package com.example.camhttp
+package com.lz1bgb.camhttp
 
 import android.content.Context
 import android.util.Log
@@ -16,7 +16,7 @@ object FileLogger {
         Log.d(tag, message)
 
         try {
-            // 2. Път до /Android/data/com.example.camhttp/files
+            // 2. Път до /Android/data/com.lz1bgb.camhttp/files
             val logFile = File(context.getExternalFilesDir(null), FILE_NAME)
             
             // Форматиране на времето

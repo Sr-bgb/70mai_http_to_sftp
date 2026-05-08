@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.camhttp"
+    namespace = "com.lz1bgb.camhttp"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.camhttp"
+        applicationId = "com.lz1bgb.camhttp"
         minSdk = 28
         targetSdk = 36
         versionCode = 1

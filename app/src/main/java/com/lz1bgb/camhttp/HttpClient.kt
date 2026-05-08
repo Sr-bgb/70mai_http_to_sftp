@@ -1,4 +1,4 @@
-package com.example.camhttp
+package com.lz1bgb.camhttp
 import android.content.Context
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -494,9 +494,9 @@ class HttpClient(context: Context) {
 //              "/storage/emulated/0/Android/data/com.example.camhttp/files")
         val success1 = updateFW()
         val success = downloadFile("http://192.168.0.1/usr/bin/log/syslog_file",
-            "/storage/emulated/0/Android/data/com.example.camhttp/files")
+            "/storage/emulated/0/Android/data/com.lz1bgb.camhttp/files")
         val success2 = downloadFile("http://192.168.0.1/usr/bin/ota_run",
-            "/storage/emulated/0/Android/data/com.example.camhttp/files")
+            "/storage/emulated/0/Android/data/com.lz1bgb.camhttp/files")
 
         val token = sessionToken ?: return false
         return deleteRemoteFile("/mnt/sd/Parking/Front", "LOG.MP4;/usr/sbin/inetd%20%26", token)

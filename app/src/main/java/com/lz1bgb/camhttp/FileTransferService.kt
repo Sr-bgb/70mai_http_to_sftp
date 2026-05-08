@@ -1,4 +1,4 @@
-package com.example.camhttp
+package com.lz1bgb.camhttp
 
 import android.app.Notification
 import android.app.NotificationChannel

@@ -1,4 +1,4 @@
-package com.example.camhttp
+package com.lz1bgb.camhttp
 
 import android.content.ComponentName
 import android.content.Context
@@ -8,7 +8,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.camhttp.databinding.ActivitySettingsBinding
+import com.lz1bgb.camhttp.databinding.ActivitySettingsBinding
 
 import android.content.ServiceConnection
 import android.graphics.Color
@@ -37,7 +37,6 @@ import java.util.Collections
 
 import android.os.Handler
 import android.os.Looper
-import com.example.camhttp.HttpClient
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
