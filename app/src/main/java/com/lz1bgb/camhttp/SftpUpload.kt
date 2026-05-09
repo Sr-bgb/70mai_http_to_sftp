@@ -9,6 +9,9 @@ import com.jcraft.jsch.SftpProgressMonitor
 import java.io.File
 import com.jcraft.jsch.SftpException
 import com.jcraft.jsch.JSchException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.core.content.edit
 
 /**
  * @brief Data structure storing info about a local file ready for upload.
@@ -48,7 +51,9 @@ class SftpUpload(private val context: Context) {
         if (filesToUpload.isEmpty()) {
             FileLogger.logToFile(context, "SftpUpload", "No local files found for upload.")
             val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit().putString("SFTP_STATUS", "No files for upload.").apply()
+            prefsStat.edit {
+                putString("SFTP_STATUS", "No files for upload.")
+            }
             return
         }
 
@@ -88,108 +93,125 @@ class SftpUpload(private val context: Context) {
      * @return UploadStatus enum describing the result.
      */
     suspend fun uploadAndDeleteFile(fileInfo: LocalFileInfo, onProgress: ((Long, Long) -> Unit)? = null): UploadStatus {
-        val prefs = context.getSharedPreferences("FtpSettings", Context.MODE_PRIVATE)
-        val ip = prefs.getString("IP_SERVER", null)
-        val user = prefs.getString("USER_SERVER", null)
-        val pass = prefs.getString("PASS_SERVER", null)
-        val baseRemotePath = prefs.getString("PATH_SERVER", "/") ?: "/"
+        return withContext(Dispatchers.IO) {
+            val prefs = context.getSharedPreferences("FtpSettings", Context.MODE_PRIVATE)
+            val ip = prefs.getString("IP_SERVER", null)
+            val user = prefs.getString("USER_SERVER", null)
+            val pass = prefs.getString("PASS_SERVER", null)
+            val baseRemotePath = prefs.getString("PATH_SERVER", "/") ?: "/"
 
-        if (ip.isNullOrBlank() || user.isNullOrBlank()) {
-            FileLogger.logToFile(context, "SftpUpload", "SFTP settings (IP or User) are not configured.")
-            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit().putString("SFTP_STATUS", "Settings missing.").apply()
-            return UploadStatus.SETTINGS_NOT_FOUND
-        }
-
-        val localFile = File(fileInfo.fullPath)
-        if (!localFile.exists()) {
-            FileLogger.logToFile(context, "SftpUpload", "Local file does not exist: ${fileInfo.fullPath}")
-            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit().putString("SFTP_STATUS", "Local file missing.").apply()
-            return UploadStatus.LOCAL_FILE_NOT_FOUND
-        }
-
-        var session: Session? = null
-        var channelSftp: ChannelSftp? = null
-
-        try {
-            val jsch = JSch()
-            session = jsch.getSession(user, ip, 22)
-            session.setPassword(pass)
-            session.setConfig("StrictHostKeyChecking", "no")
-            session.connect()
-
-            channelSftp = session.openChannel("sftp") as ChannelSftp
-            channelSftp.connect()
-            FileLogger.logToFile(context, "SftpUpload", "SFTP connection established.")
-
-            // 1. Create remote directory tree if necessary
-            val fullRemoteDir = (baseRemotePath + "/" + fileInfo.relativePath).replace("//", "/")
-            try {
-                createRemoteDirectories(channelSftp, fullRemoteDir)
-            } catch (e: SftpException) {
-                FileLogger.logToFile(context, "SftpUpload", "Failed to create remote directories: ${e.message}")
+            if (ip.isNullOrBlank() || user.isNullOrBlank()) {
+                FileLogger.logToFile(context, "SftpUpload", "SFTP settings (IP or User) are not configured.")
                 val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-                prefsStat.edit().putString("SFTP_STATUS", "Remote dir error.").apply()
-                return UploadStatus.REMOTE_DIR_CREATION_FAILED
+                prefsStat.edit {
+                    putString("SFTP_STATUS", "Settings missing.")
+                }
+                return@withContext UploadStatus.SETTINGS_NOT_FOUND
             }
 
-            // 2. Upload the file
-            FileLogger.logToFile(context, "SftpUpload", "Uploading '${fileInfo.name}' to '$fullRemoteDir'")
+            val localFile = File(fileInfo.fullPath)
+            if (!localFile.exists()) {
+                FileLogger.logToFile(context, "SftpUpload", "Local file does not exist: ${fileInfo.fullPath}")
+                val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+                prefsStat.edit {
+                    putString("SFTP_STATUS", "Local file missing.")
+                }
+                return@withContext UploadStatus.LOCAL_FILE_NOT_FOUND
+            }
+
+            var session: Session? = null
+            var channelSftp: ChannelSftp? = null
+
             try {
-                val monitor = if (onProgress != null) {
-                    object : SftpProgressMonitor {
-                        private var count = 0L
-                        private var max = 0L
-                        override fun init(op: Int, src: String?, dest: String?, max: Long) {
-                            this.max = max
-                        }
-                        override fun count(count: Long): Boolean {
-                            this.count += count
-                            onProgress(this.count, this.max)
-                            return true
-                        }
-                        override fun end() {}
+                val jsch = JSch()
+                session = jsch.getSession(user, ip, 22)
+                session.setPassword(pass)
+                session.setConfig("StrictHostKeyChecking", "no")
+                session.connect()
+
+                channelSftp = session.openChannel("sftp") as ChannelSftp
+                channelSftp.connect()
+                FileLogger.logToFile(context, "SftpUpload", "SFTP connection established.")
+
+                // 1. Create remote directory tree if necessary
+                val fullRemoteDir = (baseRemotePath + "/" + fileInfo.relativePath).replace("//", "/")
+                try {
+                    createRemoteDirectories(channelSftp, fullRemoteDir)
+                } catch (e: SftpException) {
+                    FileLogger.logToFile(context, "SftpUpload", "Failed to create remote directories: ${e.message}")
+                    val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+                    prefsStat.edit {
+                        putString("SFTP_STATUS", "Remote dir error.")
                     }
-                } else null
+                    return@withContext UploadStatus.REMOTE_DIR_CREATION_FAILED
+                }
 
-                channelSftp.put(localFile.inputStream(), "$fullRemoteDir/${fileInfo.name}", monitor)
-            } catch (e: SftpException) {
-                FileLogger.logToFile(context, "SftpUpload", "Upload failed: ${e.message}")
+                // 2. Upload the file
+                FileLogger.logToFile(context, "SftpUpload", "Uploading '${fileInfo.name}' to '$fullRemoteDir'")
+                try {
+                    val monitor = if (onProgress != null) {
+                        object : SftpProgressMonitor {
+                            private var count = 0L
+                            private var max = 0L
+                            override fun init(op: Int, src: String?, dest: String?, max: Long) {
+                                this.max = max
+                            }
+                            override fun count(count: Long): Boolean {
+                                this.count += count
+                                onProgress(this.count, this.max)
+                                return true
+                            }
+                            override fun end() {}
+                        }
+                    } else null
+
+                    channelSftp.put(localFile.inputStream(), "$fullRemoteDir/${fileInfo.name}", monitor)
+                } catch (e: SftpException) {
+                    FileLogger.logToFile(context, "SftpUpload", "Upload failed: ${e.message}")
+                    val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+                    prefsStat.edit {
+                        putString("SFTP_STATUS", "Upload error.")
+                    }
+                    return@withContext UploadStatus.UPLOAD_FAILED
+                }
+
+                // 3. Delete local file
+                if (localFile.delete()) {
+                    FileLogger.logToFile(context, "SftpUpload", "Local file deleted: ${fileInfo.fullPath}")
+                } else {
+                    Log.w("SftpUpload", "File uploaded, but local deletion failed.")
+                }
+
                 val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-                prefsStat.edit().putString("SFTP_STATUS", "Upload error.").apply()
-                return UploadStatus.UPLOAD_FAILED
+                prefsStat.edit {
+                    putString("SFTP_STATUS", "Uploaded and deleted: ${fileInfo.fullPath}")
+                }
+
+                val currentTotal = prefsStat.getInt("TOTAL_UPLOADS", 0)
+                prefsStat.edit {
+                    putInt("TOTAL_UPLOADS", currentTotal + 1)
+                }
+
+                return@withContext UploadStatus.SUCCESS
+
+            } catch (e: JSchException) {
+                FileLogger.logToFile(context, "SftpUpload", "SFTP Connection/Auth error: ${e.message}")
+                val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+                prefsStat.edit {
+                    putString("SFTP_STATUS", "SFTP error.")
+                }
+                return@withContext UploadStatus.SFTP_CONNECTION_FAILED
+            } catch (e: Exception) {
+                FileLogger.logToFile(context, "SftpUpload", "Unknown error during upload: ${e.message}")
+                val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+                prefsStat.edit {
+                    putString("SFTP_STATUS", "Unknown error.")
+                }
+                return@withContext UploadStatus.UNKNOWN_ERROR
+            } finally {
+                channelSftp?.disconnect()
+                session?.disconnect()
             }
-
-            // 3. Delete local file
-            if (localFile.delete()) {
-                FileLogger.logToFile(context, "SftpUpload", "Local file deleted: ${fileInfo.fullPath}")
-            } else {
-                Log.w("SftpUpload", "File uploaded, but local deletion failed.")
-            }
-
-            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit().putString("SFTP_STATUS", "Uploaded and deleted: ${fileInfo.fullPath}").apply()
-
-            val currentTotal = prefsStat.getInt("TOTAL_UPLOADS", 0)
-            val newTotal = currentTotal + 1
-            prefsStat.edit().putInt("TOTAL_UPLOADS", newTotal).apply()
-
-            return UploadStatus.SUCCESS
-
-        } catch (e: JSchException) {
-            FileLogger.logToFile(context, "SftpUpload", "SFTP Connection/Auth error: ${e.message}")
-            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit().putString("SFTP_STATUS", "SFTP error.").apply()
-            return UploadStatus.SFTP_CONNECTION_FAILED
-        } catch (e: Exception) {
-            FileLogger.logToFile(context, "SftpUpload", "Unknown error during upload: ${e.message}")
-            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit().putString("SFTP_STATUS", "Unknown error.").apply()
-            return UploadStatus.UNKNOWN_ERROR
-        } finally {
-            channelSftp?.disconnect()
-            session?.disconnect()
         }
     }
 

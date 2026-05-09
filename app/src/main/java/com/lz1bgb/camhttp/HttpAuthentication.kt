@@ -75,7 +75,7 @@ class HttpAuthentication(private val httpClient: HttpClient) {
                 FileLogger.logToFile(httpClient.appContext, "HttpAuth", "Attempt $i/20 - Response: $confirmResponse")
 
                 if (confirmResponse != null && 
-                    (confirmResponse.contains("\"ResultCode\":0") || confirmResponse.contains("\"ResultCode\":\"0\""))) {
+                    ((confirmResponse.contains("\"ResultCode\":0") || confirmResponse.contains("\"ResultCode\":\"0\"")))) {
                     
                     confirmed = true
                     // Final token might be returned here

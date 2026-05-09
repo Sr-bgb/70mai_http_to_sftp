@@ -21,7 +21,6 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.io.File
 import java.util.Locale
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Calendar
 
@@ -38,7 +37,7 @@ data class ServiceStatus(
     val totalFilesUploaded: Int,        /**< Total files backed up to SFTP */
     val pendingSftpFiles: Int,          /**< Number of local files waiting for upload */
     val currentFileName: String,        /**< Name of the file currently being transferred */
-    val currentSpeed: String            /**< Current transfer speed (MB/s or KB/s) */
+    val currentSpeed: String,           /**< Current transfer speed (MB/s or KB/s) */
 )
 
 /**
@@ -210,7 +209,7 @@ class FileTransferService : Service(){
             
             httpClient.registerClient()
             val startTime = System.currentTimeMillis()
-            var isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
+            val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
                 updateSpeed(bytes)
             }
             
@@ -218,7 +217,7 @@ class FileTransferService : Service(){
             
             if (isDownloaded) {
                 val downloadedFile = File(localDirFile, file.name)
-                if (downloadedFile.exists() && downloadedFile.length() > 0) {
+                if (downloadedFile.exists() && (downloadedFile.length() > 0)) {
                     Log.i("FileService", "Successfully downloaded: ${file.name}")
                     
                     val duration = (endTime - startTime) / 1000.0
@@ -290,10 +289,10 @@ class FileTransferService : Service(){
     private fun updateStatus(dlStatus: String?, dlRes: String?, upStatus: String? = null, upRes: String? = null) {
         val prefs = getSharedPreferences("FtpStats", MODE_PRIVATE)
         prefs.edit {
-            if (dlStatus != null) putString("FTP_STATUS", dlStatus)
-            if (dlRes != null) putString("FTP_RESULT", dlRes)
-            if (upStatus != null) putString("SFTP_STATUS", upStatus)
-            if (upRes != null) putString("SFTP_RESULT", upRes)
+            dlStatus?.let { putString("FTP_STATUS", it) }
+            dlRes?.let { putString("FTP_RESULT", it) }
+            upStatus?.let { putString("SFTP_STATUS", it) }
+            upRes?.let { putString("SFTP_RESULT", it) }
         }
     }
 
