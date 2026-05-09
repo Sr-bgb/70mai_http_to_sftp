@@ -108,14 +108,14 @@ class FileTransferService : Service(){
         if (dhcp == camIp) {
             FileLogger.logToFile(this, "FileService", "Camera detected ($camIp). Starting HTTP cycle.")
             runHttpCycle()
-            updateStatus("HTTP: Cycle finished", "SUCCESS")
-            pendingSftpFiles = 0 // Reset other counter while working with camera
-            return // Don't do SFTP while connected to camera
+            updateStatus(getString(R.string.msg_http_success), "SUCCESS")
+            pendingSftpFiles = 0 
+            return 
         }
 
         // 2. If not on camera network, try SFTP
         FileLogger.logToFile(this, "FileService", "Starting SFTP backup...")
-        pendingCameraFiles = 0 // Reset camera counter
+        pendingCameraFiles = 0
         try {
             val filesToUpload = sftpUpload.getLocalFilesToUpload()
             pendingSftpFiles = filesToUpload.size
@@ -132,9 +132,9 @@ class FileTransferService : Service(){
                 }
                 currentFileName = ""
                 currentSpeed = ""
-                updateStatus(null, null, "SFTP: Files uploaded", "SUCCESS")
+                updateStatus(null, null, getString(R.string.msg_sftp_success), "SUCCESS")
             } else {
-                updateStatus(null, null, "SFTP: Nothing to upload", "IDLE")
+                updateStatus(null, null, getString(R.string.msg_sftp_idle), "IDLE")
             }
         } catch (e: Exception) {
             Log.e("FileService", "SFTP error: ${e.message}")
@@ -360,13 +360,13 @@ class FileTransferService : Service(){
         val remainingMillis = nextExecutionTime - now
 
         val generalStatus = when {
-            isTaskRunning.get() -> "Status: Transfer cycle running..."
-            nextExecutionTime == 0L -> "Status: Waiting for initial check."
-            remainingMillis <= 0 -> "Status: Waiting to start check."
+            isTaskRunning.get() -> getString(R.string.status_running)
+            nextExecutionTime == 0L -> getString(R.string.status_waiting_initial)
+            remainingMillis <= 0 -> getString(R.string.status_waiting_start)
             else -> {
                 val minutes = (remainingMillis / 1000) / 60
                 val seconds = (remainingMillis / 1000) % 60
-                "Status: IDLE. Next check in ${minutes}m ${seconds}s."
+                getString(R.string.status_next_check, minutes, seconds)
             }
         }
         val statsPrefs = getSharedPreferences("FtpStats", MODE_PRIVATE)

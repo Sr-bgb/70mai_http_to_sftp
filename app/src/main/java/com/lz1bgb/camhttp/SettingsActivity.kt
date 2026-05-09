@@ -133,17 +133,17 @@ class SettingsActivity : AppCompatActivity() {
             val status = fileTransferService!!.getServiceStatus()
 
             binding.statusTextView.text = status.generalStatus
-            binding.lastDownloadResultTextView.text = "Last Download: ${status.lastDownloadResult}"
-            binding.totalFilesDownloadedTextView.text = "Total Downloaded: ${status.totalFilesDownloaded}"
-            binding.lastDownloadDurationTextView.text = "Last Transfer Time: ${status.lastDownloadDuration}"
-            binding.pendingCameraFilesTextView.text = "Remaining on Camera: ${status.pendingCameraFiles}"
-            binding.lastUploadResultTextView.text = "Last Upload: ${status.lastUploadResult}"
-            binding.totalFilesUploadedTextView.text = "Total Uploaded: ${status.totalFilesUploaded}"
-            binding.pendingSftpFilesTextView.text = "Remaining for Upload: ${status.pendingSftpFiles}"
+            binding.lastDownloadResultTextView.text = getString(R.string.label_last_download, status.lastDownloadResult)
+            binding.totalFilesDownloadedTextView.text = getString(R.string.label_total_downloaded, status.totalFilesDownloaded)
+            binding.lastDownloadDurationTextView.text = getString(R.string.label_last_duration, status.lastDownloadDuration)
+            binding.pendingCameraFilesTextView.text = getString(R.string.label_pending_camera, status.pendingCameraFiles)
+            binding.lastUploadResultTextView.text = getString(R.string.label_last_upload, status.lastUploadResult)
+            binding.totalFilesUploadedTextView.text = getString(R.string.label_total_uploaded, status.totalFilesUploaded)
+            binding.pendingSftpFilesTextView.text = getString(R.string.label_pending_sftp, status.pendingSftpFiles)
             
             if (status.currentFileName.isNotEmpty()) {
-                binding.fileNameInProcess.text = "File: ${status.currentFileName}"
-                binding.fileTransferSpeed.text = "Speed: ${status.currentSpeed}"
+                binding.fileNameInProcess.text = getString(R.string.label_current_file, status.currentFileName)
+                binding.fileTransferSpeed.text = getString(R.string.label_current_speed, status.currentSpeed)
             } else {
                 binding.fileNameInProcess.text = getString(R.string.status_idle)
                 binding.fileTransferSpeed.text = getString(R.string.speed_idle)
@@ -181,6 +181,7 @@ class SettingsActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("FtpSettings", Context.MODE_PRIVATE)
         val statsPrefs = getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
 
+        // Load saved settings
         binding.camIPTxt.setText(prefs.getString("IP_CAM", ""))
         binding.camSSIDTxt.setText(prefs.getString("SSID_CAM", ""))
         binding.camWifiPassTxt.setText(prefs.getString("PASS_WIFI_CAM", ""))
@@ -191,11 +192,11 @@ class SettingsActivity : AppCompatActivity() {
         binding.backupPathTxt.setText(prefs.getString("PATH_SERVER", ""))
 
         val initialTotalDownloads = statsPrefs.getInt("TOTAL_DOWNLOADS", 0)
-        binding.totalFilesDownloadedTextView.text = "Total Downloaded: $initialTotalDownloads"
+        binding.totalFilesDownloadedTextView.text = getString(R.string.label_total_downloaded, initialTotalDownloads)
         binding.totalFilesDownloadedTextView.visibility = View.VISIBLE
 
         val initialTotalUploads = statsPrefs.getInt("TOTAL_UPLOADS", 0)
-        binding.totalFilesUploadedTextView.text = "Total Uploaded: $initialTotalUploads"
+        binding.totalFilesUploadedTextView.text = getString(R.string.label_total_uploaded, initialTotalUploads)
         binding.totalFilesUploadedTextView.visibility = View.VISIBLE
 
         binding.okButton.setOnClickListener {
@@ -236,13 +237,13 @@ class SettingsActivity : AppCompatActivity() {
             sp.edit {
                 putInt("TOTAL_DOWNLOADS", 0)
                 putInt("TOTAL_UPLOADS", 0)
-                putString("FTP_STATUS", "Stats Reset")
-                putString("SFTP_STATUS", "Stats Reset")
+                putString("FTP_STATUS", getString(R.string.status_idle))
+                putString("SFTP_STATUS", getString(R.string.status_idle))
                 putString("LAST_DOWNLOAD_DURATION", "0 sec.")
             }
-            binding.totalFilesDownloadedTextView.text = "Total Downloaded: 0"
-            binding.lastDownloadDurationTextView.text = "Last Transfer Time: 0 sec."
-            binding.totalFilesUploadedTextView.text = "Total Uploaded: 0"
+            binding.totalFilesDownloadedTextView.text = getString(R.string.label_total_downloaded, 0)
+            binding.lastDownloadDurationTextView.text = getString(R.string.label_last_duration, "0 sec.")
+            binding.totalFilesUploadedTextView.text = getString(R.string.label_total_uploaded, 0)
             Toast.makeText(this, "Stats Reset.", Toast.LENGTH_SHORT).show()
         }
 

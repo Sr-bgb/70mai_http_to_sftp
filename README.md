@@ -1,6 +1,12 @@
-# 70mai Dashcam to SFTP Auto-Transfer
+# 70mai Dashcam Auto-Backup to SFTP (Android)
 
-An Android application designed to automatically synchronize files from 70mai dash cameras to a private SFTP storage. It features a sophisticated network management system to handle the dashcam's non-internet Wi-Fi while maintaining a cellular data connection for the backup process.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![70mai](https://img.shields.io/badge/Dashcam-70mai-orange.svg)](#)
+
+A professional Android application designed for **70mai dashcam reverse engineering** and **automatic file synchronization**. It transfers videos and photos from 70mai dash cameras to a private SFTP storage via a secure Wi-Fi handshake.
+
+### 🔍 Optimized for Search Engines (SEO Keywords)
+`70mai dashcam backup`, `70mai protocol reverse engineering`, `70mai A500S video transfer`, `70mai A800S Android app`, `auto dashcam sync SFTP`, `dashcam to cloud backup`, `70mai Wi-Fi protocol`, `com.lz1bgb.camhttp`.
 
 ## 🚀 Key Features
 

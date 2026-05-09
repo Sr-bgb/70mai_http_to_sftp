@@ -18,6 +18,8 @@
     <string name="archive_pass_hint">SFTP Password</string>
     <string name="archive_path_hint">Upload path, e.g. /backups/</string>
     <string name="select_language">Select Language</string>
+    <string name="status_idle">Idle</string>
+    <string name="speed_idle">0 KB/s</string>
     <string name="tab_transfer">Transfer</string>
     <string name="tab_settings">Settings</string>
     <string name="label_camera_ip">Camera IP</string>
@@ -28,6 +30,20 @@
     <string name="label_archive_user">Archive User</string>
     <string name="label_archive_pass">Archive Password</string>
     <string name="label_archive_path">Archive Path</string>
-    <string name="status_idle">Idle</string>
-    <string name="speed_idle">0 KB/s</string>
+    <string name="label_last_download">Last Download: %1$s</string>
+    <string name="label_total_downloaded">Total Downloaded: %1$d</string>
+    <string name="label_last_duration">Last Transfer Time: %1$s</string>
+    <string name="label_pending_camera">Remaining on Camera: %1$d</string>
+    <string name="label_last_upload">Last Upload: %1$s</string>
+    <string name="label_total_uploaded">Total Uploaded: %1$d</string>
+    <string name="label_pending_sftp">Remaining for Upload: %1$d</string>
+    <string name="label_current_file">File: %1$s</string>
+    <string name="label_current_speed">Speed: %1$s</string>
+    <string name="status_running">Transfer cycle running...</string>
+    <string name="status_waiting_initial">Waiting for initial check.</string>
+    <string name="status_waiting_start">Waiting to start check.</string>
+    <string name="status_next_check">Idle. Next check in %1$dm %2$ds.</string>
+    <string name="msg_http_success">HTTP: Cycle completed</string>
+    <string name="msg_sftp_success">SFTP: Files uploaded</string>
+    <string name="msg_sftp_idle">SFTP: Nothing to upload</string>
 </resources>
