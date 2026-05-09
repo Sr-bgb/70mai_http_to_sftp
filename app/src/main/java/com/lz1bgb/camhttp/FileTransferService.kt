@@ -25,16 +25,28 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Calendar
 
+/**
+ * @brief Data class for reporting service status to the UI.
+ */
 data class ServiceStatus(
-    val generalStatus: String,
-    val lastDownloadResult: String,
-    val totalFilesDownloaded: Int,
-    val pendingCameraFiles: Int,
-    val lastDownloadDuration: String,
-    val lastUploadResult: String,
-    val totalFilesUploaded: Int,
-    val pendingSftpFiles: Int
+    val generalStatus: String,          /**< Main status message (Waiting/Running) */
+    val lastDownloadResult: String,     /**< Result of the last dashcam download */
+    val totalFilesDownloaded: Int,      /**< Total files saved to phone */
+    val pendingCameraFiles: Int,        /**< Number of files remaining on camera */
+    val lastDownloadDuration: String,   /**< Time taken for last download */
+    val lastUploadResult: String,       /**< Result of the last SFTP upload */
+    val totalFilesUploaded: Int,        /**< Total files backed up to SFTP */
+    val pendingSftpFiles: Int,          /**< Number of local files waiting for upload */
+    val currentFileName: String,        /**< Name of the file currently being transferred */
+    val currentSpeed: String            /**< Current transfer speed (MB/s or KB/s) */
 )
+
+/**
+ * @brief Foreground service that orchestrates file transfers from Dashcam (HTTP) to Phone, and Phone to SFTP.
+ * 
+ * It periodically checks for the camera Wi-Fi. If found, it downloads new files. 
+ * If not found, it attempts to upload downloaded files to an SFTP server.
+ */
 class FileTransferService : Service(){
 
     private val job = SupervisorJob()
@@ -44,15 +56,14 @@ class FileTransferService : Service(){
     private lateinit var httpAuth: HttpAuthentication
     private lateinit var sftpUpload: SftpUpload
 
-    // 1. Създаваме Handler и Runnable за периодично изпълнение
+    // Handler and Runnable for periodic execution
     private lateinit var handler: Handler
-    //    private val checkInterval: Long = 5 * 60 * 1000 // 5 минути в милисекунди
-    private val checkInterval: Long = 30 * 1000 // 30 sec в милисекунди
+    private val checkInterval: Long = 30 * 1000 // 30 seconds
 
     private val isTaskRunning = AtomicBoolean(false)
     private var nextExecutionTime: Long = 0L
 
-    // 1. Добавяме Binder за комуникация с Activity
+    // Binder for communication with Activity
     private val binder = LocalBinder()
 
     inner class LocalBinder : Binder() {
@@ -62,176 +73,202 @@ class FileTransferService : Service(){
     override fun onBind(intent: Intent?): IBinder = binder
 
     private val periodicCheck = Runnable {
-        // Стартираме цикъла за проверка и трансфер
+        // Start the check and transfer cycle
         if (isTaskRunning.compareAndSet(false, true)) {
             scope.launch {
                 try {
-                    FileLogger.logToFile(this@FileTransferService, "FileService", "Започва периодична проверка...")
+                    FileLogger.logToFile(this@FileTransferService, "FileService", "Starting periodic check...")
                     performTransferCycle()
                 } catch (e: Exception) {
-                    Log.e("FileService", "Грешка в цикъла: ${e.message}")
+                    Log.e("FileService", "Error in cycle: ${e.message}")
                 } finally {
                     isTaskRunning.set(false)
                     scheduleNextRun()
                 }
             }
         } else {
-            FileLogger.logToFile(this, "FileService", "Пропускане на проверката - задачата все още работи.")
+            FileLogger.logToFile(this, "FileService", "Skip check - task still running.")
         }
     }
 
     private var pendingCameraFiles = 0
     private var pendingSftpFiles = 0
+    private var currentFileName = ""
+    private var currentSpeed = ""
+
+    private var lastBytes = 0L
+    private var lastTime = 0L
 
     private suspend fun performTransferCycle() {
         httpClient.updateNetworkInfo()
         val dhcp = httpClient.dhcpServerIpAddress
+        val camIp = httpClient.cameraIp
 
-        // 1. Пробваме първо HTTP (Камера)
-        if (dhcp == "192.168.0.1") {
-            FileLogger.logToFile(this, "FileService", "Засечена камера (192.168.0.1). Стартираме HTTP цикъл.")
+        // 1. Try HTTP (Camera) first
+        if (dhcp == camIp) {
+            FileLogger.logToFile(this, "FileService", "Camera detected ($camIp). Starting HTTP cycle.")
             runHttpCycle()
-            updateStatus("HTTP: Цикълът завърши", "SUCCESS")
-            pendingSftpFiles = 0 // Нулираме другия брояч, докато работим с камерата
-            return // Докато има връзка с камерата, не правим SFTP
+            updateStatus("HTTP: Cycle finished", "SUCCESS")
+            pendingSftpFiles = 0 // Reset other counter while working with camera
+            return // Don't do SFTP while connected to camera
         }
 
-        // 2. Ако не сме в мрежата на камерата, пробваме SFTP
-        FileLogger.logToFile(this, "FileService", "Пробваме SFTP бекъп...")
-        pendingCameraFiles = 0 // Нулираме камера брояча
+        // 2. If not on camera network, try SFTP
+        FileLogger.logToFile(this, "FileService", "Starting SFTP backup...")
+        pendingCameraFiles = 0 // Reset camera counter
         try {
             val filesToUpload = sftpUpload.getLocalFilesToUpload()
             pendingSftpFiles = filesToUpload.size
             
             if (pendingSftpFiles > 0) {
                 filesToUpload.forEach { fileInfo ->
-                    sftpUpload.uploadAndDeleteFile(fileInfo)
+                    val parentFolder = fileInfo.relativePath.substringAfterLast('/').ifEmpty { fileInfo.relativePath }
+                    currentFileName = "$parentFolder/${fileInfo.name}"
+                    resetSpeed()
+                    sftpUpload.uploadAndDeleteFile(fileInfo) { bytes, _ ->
+                        updateSpeed(bytes)
+                    }
                     pendingSftpFiles--
                 }
-                updateStatus(null, null, "SFTP: Файловете са качени", "SUCCESS")
+                currentFileName = ""
+                currentSpeed = ""
+                updateStatus(null, null, "SFTP: Files uploaded", "SUCCESS")
             } else {
-                updateStatus(null, null, "SFTP: Няма файлове за качване", "IDLE")
+                updateStatus(null, null, "SFTP: Nothing to upload", "IDLE")
             }
         } catch (e: Exception) {
-            Log.e("FileService", "SFTP грешка: ${e.message}")
-            updateStatus(null, null, "SFTP: Грешка при качване", "ERROR")
+            Log.e("FileService", "SFTP error: ${e.message}")
+            updateStatus(null, null, "SFTP: Error during upload", "ERROR")
         }
     }
 
     private suspend fun runHttpCycle(): Boolean {
         var token = httpClient.sessionToken
         
+        // If no token, attempt pairing
         if (token == null) {
-            FileLogger.logToFile(this, "FileService", "Няма токен. Стартираме сдвояване...")
+            FileLogger.logToFile(this, "FileService", "No token. Starting pairing...")
             val authSuccess = httpAuth.performAuthenticationLogic()
             if (!authSuccess) return false
             token = httpClient.sessionToken ?: return false
         } else {
+            // Register periodically for keep-alive
             httpClient.registerClient()
         }
 
-        // Сканираме всички типове от 0 до 15 за пълнота
+        // 0: Front Normal, 8: Back Normal, 1: Front Emergency, 6: Back Emergency, 2: Parking, 3: Photo
+        val fileTypes = listOf(0, 8, 1, 6, 2, 3)
         val allFiles = mutableListOf<FileInfo>()
-        
-        for (type in 0..15) {
+
+        for (type in fileTypes) {
+            // Register before each list request
             httpClient.registerClient()
             val files = httpClient.getFileList(type)
-            if (files != null && files.isNotEmpty()) {
-                FileLogger.logToFile(this, "FileService", "Тип $type: Намерени ${files.size} файла.")
+            if (files != null) {
+                FileLogger.logToFile(this, "FileService", "Type $type: Found ${files.size} files.")
                 
-                val readyFiles = if (type == 0 || type == 8 || type == 1 || type == 6 || type == 2) {
-                    // Филтрираме видео файловете - сваляме само тези, които са на повече от 3 минути
-                    filterFinishedFiles(files)
+                // Remove last 2 files from video categories to ensure recording is finished
+                val typeFiles = if (type in listOf(0, 8, 1, 6, 2)) {
+                    if (files.size > 2) {
+                        files.sortedBy { it.name }.dropLast(2)
+                    } else {
+                        FileLogger.logToFile(this, "FileService", "Type $type has only ${files.size} files. Waiting for finalization.")
+                        emptyList()
+                    }
                 } else {
-                    files // Снимки и други се свалят веднага
+                    files // Photos etc.
                 }
-                allFiles.addAll(readyFiles)
+                
+                allFiles.addAll(typeFiles)
             }
         }
 
         if (allFiles.isEmpty()) {
-            FileLogger.logToFile(this, "FileService", "Няма готови файлове за сваляне (останалите са в процес на запис).")
+            FileLogger.logToFile(this, "FileService", "No new ready files for download.")
             return true
         }
 
-        // Глобално сортиране
+        // Global sort (oldest first)
         val sortedFiles = allFiles.sortedBy { it.name }
         pendingCameraFiles = sortedFiles.size
 
         for (file in sortedFiles) {
-            FileLogger.logToFile(this, "FileService", "Обработка на ${file.name}")
+            FileLogger.logToFile(this, "FileService", "Processing ${file.name} (Path: ${file.path})")
+            val parentFolder = file.path.substringAfterLast('/').ifEmpty { file.path }
+            currentFileName = "$parentFolder/${file.name}"
+            resetSpeed()
             
-            // Пътища
+            // Construct URL
+            val downloadUrl = "http://${httpClient.cameraIp}${file.path}/${file.name}"
+            
+            // Remove /mnt/sd for local path
             val cleanPath = file.path.removePrefix("/mnt/sd").trimStart('/')
             val localDirFile = File(getExternalFilesDir(null), "camera/$cleanPath")
             if (!localDirFile.exists()) localDirFile.mkdirs()
             
             val localPath = localDirFile.absolutePath
             
-            // Само един URL формат според пътя, върнат от камерата
-            val downloadUrl = "http://192.168.0.1${file.path}/${file.name}"
-            
-            var downloadedFile: File? = null
-            var startTime = 0L
-            var endTime = 0L
-            
             httpClient.registerClient()
-            startTime = System.currentTimeMillis()
-            if (httpClient.downloadFile(downloadUrl, localPath)) {
-                endTime = System.currentTimeMillis()
-                val f = File(localDirFile, file.name)
-                if (f.exists() && f.length() > 0) {
-                    downloadedFile = f
-                }
+            val startTime = System.currentTimeMillis()
+            var isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
+                updateSpeed(bytes)
             }
             
-            if (downloadedFile != null) {
-                Log.i("FileService", "Успешно свален: ${file.name}")
-                val duration = (endTime - startTime) / 1000.0
-                saveDownloadDuration(duration)
-                incrementDownloadCount()
-                
-                httpClient.registerClient()
-                if (httpClient.deleteRemoteFile(file.path, file.name, token)) {
-                    FileLogger.logToFile(this, "FileService", "Изтрит от камерата.")
-                    if (pendingCameraFiles > 0) pendingCameraFiles--
+            val endTime = System.currentTimeMillis()
+            
+            if (isDownloaded) {
+                val downloadedFile = File(localDirFile, file.name)
+                if (downloadedFile.exists() && downloadedFile.length() > 0) {
+                    Log.i("FileService", "Successfully downloaded: ${file.name}")
+                    
+                    val duration = (endTime - startTime) / 1000.0
+                    saveDownloadDuration(duration)
+                    incrementDownloadCount()
+                    
+                    // Register before delete
+                    httpClient.registerClient()
+                    val deleted = httpClient.deleteRemoteFile(file.path, file.name, token)
+                    if (deleted) {
+                        FileLogger.logToFile(this, "FileService", "Deleted from camera: ${file.name}")
+                        if (pendingCameraFiles > 0) pendingCameraFiles--
+                    }
+                } else {
+                    Log.e("FileService", "File ${file.name} is 0 bytes. NOT deleting from camera.")
                 }
             } else {
-                Log.e("FileService", "Грешка при изтегляне или празен файл за ${file.name}. Пропускаме.")
+                Log.e("FileService", "Error downloading ${file.name}. Skipping.")
             }
         }
+        currentFileName = ""
+        currentSpeed = ""
         
         return true
     }
 
+    private fun resetSpeed() {
+        lastBytes = 0L
+        lastTime = System.currentTimeMillis()
+        currentSpeed = "0 KB/s"
+    }
+
     /**
-     * Премахва файловете, които са записани в последните 3 минути,
-     * за да гарантира, че не сваляме текущо отворен файл.
+     * @brief Calculates and updates the current transfer speed.
      */
-    private fun filterFinishedFiles(files: List<FileInfo>): List<FileInfo> {
-        val sdf = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
-        val now = Calendar.getInstance()
-        
-        return files.filter { file ->
-            try {
-                // Имената са от типа: NO20260430-153218...
-                val datePart = file.name.substring(2, 17)
-                val fileDate = sdf.parse(datePart)
-                
-                if (fileDate != null) {
-                    val fileCal = Calendar.getInstance()
-                    fileCal.time = fileDate
-                    // Камерата може да е с грешно време, затова гледаме относително
-                    // Ако имаме много файлове, махаме най-новите 2 за сигурност
-                    // Но ако файлът е по-стар от 3 минути спрямо "сега", той е готов.
-                    // Тъй като не знаем времето на камерата точно, dropLast(2) е по-сигурно при голям списък.
-                    true 
-                } else true
-            } catch (e: Exception) {
-                true
+    private fun updateSpeed(currentBytes: Long) {
+        val now = System.currentTimeMillis()
+        val timeDiff = now - lastTime
+        if (timeDiff >= 1000) { // Update every second
+            val bytesDiff = currentBytes - lastBytes
+            val speedBytesPerSec = (bytesDiff * 1000) / timeDiff
+            
+            currentSpeed = when {
+                speedBytesPerSec >= 1024 * 1024 -> String.format(Locale.US, "%.2f MB/s", speedBytesPerSec / (1024.0 * 1024.0))
+                speedBytesPerSec >= 1024 -> String.format(Locale.US, "%.2f KB/s", speedBytesPerSec / 1024.0)
+                else -> "$speedBytesPerSec B/s"
             }
-        }.sortedBy { it.name }.let { sorted ->
-            if (sorted.size > 2) sorted.dropLast(2) else emptyList()
+            
+            lastBytes = currentBytes
+            lastTime = now
         }
     }
 
@@ -246,7 +283,7 @@ class FileTransferService : Service(){
     private fun saveDownloadDuration(seconds: Double) {
         val prefs = getSharedPreferences("FtpStats", MODE_PRIVATE)
         prefs.edit {
-            putString("LAST_DOWNLOAD_DURATION", String.format(Locale.US, "%.2f сек.", seconds))
+            putString("LAST_DOWNLOAD_DURATION", String.format(Locale.US, "%.2f sec.", seconds))
         }
     }
 
@@ -263,18 +300,27 @@ class FileTransferService : Service(){
     private fun scheduleNextRun() {
         nextExecutionTime = System.currentTimeMillis() + checkInterval
         handler.postDelayed(periodicCheck, checkInterval)
-        FileLogger.logToFile(this, "FileService", "Следваща проверка е планирана.")
+        FileLogger.logToFile(this, "FileService", "Next check scheduled.")
     }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        // Инициализираме Handler-а с основната нишка
+        // Initialize Handler with main thread
         handler = Handler(Looper.getMainLooper())
 
         httpClient = HttpClient(this)
         httpAuth = HttpAuthentication(httpClient)
         sftpUpload = SftpUpload(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Stop scheduled checks
+        handler.removeCallbacks(periodicCheck)
+        // Cancel all active Coroutines
+        job.cancel()
+        FileLogger.logToFile(this, "FileService", "Service stopped and cleaned up.")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -286,9 +332,9 @@ class FileTransferService : Service(){
             startForeground(1, notification)
         }
 
-        // 2. Спираме всякакви предишни задачи и стартираме новата
+        // Stop any previous tasks and start new one
         handler.removeCallbacks(periodicCheck)
-        handler.post(periodicCheck) // Стартираме веднага първия път
+        handler.post(periodicCheck) // Start immediately the first time
 
         return START_STICKY
     }
@@ -304,7 +350,7 @@ class FileTransferService : Service(){
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, "FileTransferChannel")
             .setContentTitle("File Transfer")
-            .setContentText("Сървисът е активен и проверява периодично.")
+            .setContentText("Service is active and checking periodically.")
             .setSmallIcon(R.drawable.ic_notification_sync)
             .build()
     }
@@ -314,22 +360,22 @@ class FileTransferService : Service(){
         val remainingMillis = nextExecutionTime - now
 
         val generalStatus = when {
-            isTaskRunning.get() -> "Статус: Изпълнява се цикъл за трансфер..."
-            nextExecutionTime == 0L -> "Статус: Очаква се първоначална проверка."
-            remainingMillis <= 0 -> "Статус: В очакване на стартиране на проверката."
+            isTaskRunning.get() -> "Status: Transfer cycle running..."
+            nextExecutionTime == 0L -> "Status: Waiting for initial check."
+            remainingMillis <= 0 -> "Status: Waiting to start check."
             else -> {
                 val minutes = (remainingMillis / 1000) / 60
                 val seconds = (remainingMillis / 1000) % 60
-                "Статус: В изчакване. Следваща проверка след около ${minutes}м ${seconds}с."
+                "Status: IDLE. Next check in ${minutes}m ${seconds}s."
             }
         }
         val statsPrefs = getSharedPreferences("FtpStats", MODE_PRIVATE)
         val totalDownloads = statsPrefs.getInt("TOTAL_DOWNLOADS", 0)
         val totalUploads = statsPrefs.getInt("TOTAL_UPLOADS", 0)
-        val lastDuration = statsPrefs.getString("LAST_DOWNLOAD_DURATION", "0 сек.") ?: "0 сек."
+        val lastDuration = statsPrefs.getString("LAST_DOWNLOAD_DURATION", "0 sec.") ?: "0 sec."
 
-        val lastDownloadResult = statsPrefs.getString("FTP_STATUS", null)?: "Изчаква FTP изпълнение"
-        val lastUploadResult = statsPrefs.getString("SFTP_STATUS", null)?: "Изчаква SFTP изпълнение"
+        val lastDownloadResult = statsPrefs.getString("FTP_STATUS", null)?: "Waiting for FTP"
+        val lastUploadResult = statsPrefs.getString("SFTP_STATUS", null)?: "Waiting for SFTP"
 
         return ServiceStatus(
             generalStatus, 
@@ -339,7 +385,9 @@ class FileTransferService : Service(){
             lastDuration, 
             lastUploadResult, 
             totalUploads,
-            pendingSftpFiles
+            pendingSftpFiles,
+            currentFileName,
+            currentSpeed
         )
     }
 }

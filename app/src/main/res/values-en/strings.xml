@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">HTTP 70MAI Dashcam Transfer</string>
+    <string name="btn_start">Start</string>
+    <string name="btn_stat">Stats</string>
+    <string name="btn_token">Token</string>
+    <string name="btn_info">Info</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_no_sleep">No Sleep</string>
+    <string name="btn_album">Album</string>
+    <string name="btn_inject">Inject</string>
+    <string name="cam_settings_title">Camera Settings</string>
+    <string name="cam_ip_hint">e.g. 192.168.1.1</string>
+    <string name="cam_user_hint">HTTP User Number</string>
+    <string name="cam_pass_hint">HTTP Key</string>
+    <string name="archive_settings_title">Archive Settings (SFTP)</string>
+    <string name="archive_ip_hint">SFTP Server IP</string>
+    <string name="archive_user_hint">SFTP Username</string>
+    <string name="archive_pass_hint">SFTP Password</string>
+    <string name="archive_path_hint">Upload path, e.g. /backups/</string>
+    <string name="select_language">Select Language</string>
+    <string name="tab_transfer">Transfer</string>
+    <string name="tab_settings">Settings</string>
+    <string name="label_camera_ip">Camera IP</string>
+    <string name="label_camera_ssid">Wi-Fi Name (SSID)</string>
+    <string name="label_camera_wifi_pass">Wi-Fi Password</string>
+    <string name="btn_connect_wifi">Connect Wi-Fi</string>
+    <string name="label_archive_ip">Archive IP</string>
+    <string name="label_archive_user">Archive User</string>
+    <string name="label_archive_pass">Archive Password</string>
+    <string name="label_archive_path">Archive Path</string>
+    <string name="status_idle">Idle</string>
+    <string name="speed_idle">0 KB/s</string>
+</resources>

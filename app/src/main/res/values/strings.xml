@@ -17,4 +17,17 @@
     <string name="archive_user_hint">Потребителско име за SFTP</string>
     <string name="archive_pass_hint">Парола за SFTP</string>
     <string name="archive_path_hint">Път за качване, напр. /backups/</string>
+    <string name="select_language">Избор на език</string>
+    <string name="tab_transfer">Трансфер</string>
+    <string name="tab_settings">Настройки</string>
+    <string name="label_camera_ip">Камера IP</string>
+    <string name="label_camera_ssid">Wi-Fi Име (SSID)</string>
+    <string name="label_camera_wifi_pass">Wi-Fi Парола</string>
+    <string name="btn_connect_wifi">Свържи Wi-Fi</string>
+    <string name="label_archive_ip">Архив IP</string>
+    <string name="label_archive_user">Архив Потребител</string>
+    <string name="label_archive_pass">Архив Парола</string>
+    <string name="label_archive_path">Архив Път</string>
+    <string name="status_idle">В изчакване</string>
+    <string name="speed_idle">0 KB/s</string>
 </resources>

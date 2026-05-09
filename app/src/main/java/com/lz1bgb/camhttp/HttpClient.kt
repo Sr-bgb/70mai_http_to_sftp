@@ -1,4 +1,5 @@
 package com.lz1bgb.camhttp
+
 import android.content.Context
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -6,21 +7,16 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import android.util.Log
-
 import java.math.BigInteger
 import java.security.MessageDigest
-
-
 import java.io.FileOutputStream
 import java.io.OutputStream
-
 import androidx.core.content.edit
 import android.net.ConnectivityManager
 import android.net.Network
@@ -30,56 +26,68 @@ import java.net.Inet4Address
 import android.os.Build
 import java.util.Locale
 
+/**
+ * @brief Data class representing file information returned by the camera.
+ */
 @Serializable
 data class FileInfo(
-    val path: String,
-    val name: String,
-    val size: String,
-    val type: String,
+    val path: String,   /**< Remote directory path on the camera */
+    val name: String,   /**< Filename with extension */
+    val size: String,   /**< File size in bytes (as string) */
+    val type: String,   /**< File category type */
 )
 
+/**
+ * @brief Data class for parsing the camera's JSON API responses.
+ */
 @Serializable
 data class ApiResponse(
     @SerialName("ResultCode")
-    val resultCode: kotlinx.serialization.json.JsonElement,
+    val resultCode: kotlinx.serialization.json.JsonElement, /**< Response status code (0 for success) */
     @SerialName("Result")
-    val result: List<FileInfo> = emptyList(),
+    val result: List<FileInfo> = emptyList(),               /**< List of files returned by the query */
 )
 
+/**
+ * @brief Main HTTP client for interacting with the 70mai dashcam.
+ * 
+ * Handles network binding, authentication tokens, file listing, downloading, and remote deletion.
+ */
 class HttpClient(context: Context) {
 
-    /**
-     * ▼▼▼ 2. Съхраняваме applicationContext, за да избегнем memory leaks ▼▼▼
-     * (Това е най-добрата практика)
+    /** 
+     * @brief Application context to avoid memory leaks.
      */
     val appContext = context.applicationContext
 
+    /**
+     * @brief Current local IPv4 address of the phone.
+     */
     var currentIpAddress: String? = null
-        private set // Правим setter-а private, за да се задава само от класа
+        private set
 
     /**
-     * IP адресът на DHCP сървъра.
-     * Обновява се чрез извикване на updateNetworkInfo().
+     * @brief IP address of the DHCP server (camera gateway).
      */
     var dhcpServerIpAddress: String? = null
-        private set // Правим setter-а private
+        private set
 
-    // Създаваме единствен екземпляр на OkHttpClient,
-    // който да се преизползва за всички заявки.
-    // Настройваме timeouts на 0 (безкрайно), за да поддържаме много дълги изтегляния на големи файлове.
+    /**
+     * @brief Reusable OkHttpClient instance with infinite timeouts for large file transfers.
+     */
     private var client = OkHttpClient.Builder()
         .connectTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
         .writeTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
-    // Специален клиент за камерата, вързан към Wi-Fi мрежата
     private var cameraClient: OkHttpClient? = null
     private var cameraNetwork: Network? = null
-
     private val json = Json { ignoreUnknownKeys = true }
 
-    // Сесиен токен, получен след успешно свързване (pairing)
+    /**
+     * @brief Persisted session token obtained after pairing.
+     */
     var sessionToken: String?
         get() {
             val prefs = appContext?.getSharedPreferences("CamSettings", Context.MODE_PRIVATE)
@@ -93,9 +101,19 @@ class HttpClient(context: Context) {
         }
 
     /**
-     * Изчислява MD5 хеш на входния стринг и го връща като hex стринг
-     * @param input входният стринг за хеширане
-     * @return MD5 хеш като hex стринг (32 символа)
+     * @brief Gets the target camera IP from user settings.
+     * @return Configured IP or default 192.168.0.1.
+     */
+    val cameraIp: String
+        get() {
+            val prefs = appContext?.getSharedPreferences("FtpSettings", Context.MODE_PRIVATE)
+            return prefs?.getString("IP_CAM", "192.168.0.1") ?: "192.168.0.1"
+        }
+
+    /**
+     * @brief Calculates MD5 hash of a string.
+     * @param input String to hash.
+     * @return 32-character hex string.
      */
     fun calculateMD5(input: String): String {
         val md = MessageDigest.getInstance("MD5")
@@ -104,20 +122,28 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Генерира подпис (sign) за 70mai заявки.
-     * Алгоритъм: MD5(URL_Query + Token)
+     * @brief Generates the security signkey for 70mai requests.
+     * @param urlQuery The query part of the URL.
+     * @param token Active session token.
+     * @return MD5 signature.
      */
     fun generateSignKey(urlQuery: String, token: String): String {
         return calculateMD5(urlQuery + token)
     }
 
+    /**
+     * @brief Scans available networks and binds to the camera's Wi-Fi.
+     * 
+     * Forces network traffic through the Wi-Fi interface if the camera gateway is detected,
+     * allowing simultaneous Wi-Fi and mobile data usage.
+     */
     fun updateNetworkInfo() {
         val connectivityManager =
             appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val wifiManager =
             appContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
-        // Намираме всички налични мрежи.
+        // Find all available networks.
         @Suppress("DEPRECATION")
         val networks = connectivityManager.allNetworks
         var foundCameraNetwork: Network? = null
@@ -126,13 +152,13 @@ class HttpClient(context: Context) {
             val capabilities = connectivityManager.getNetworkCapabilities(network)
             val linkProperties = connectivityManager.getLinkProperties(network)
 
-            // Търсим Wi-Fi мрежа, чийто DHCP сървър (Gateway) е 192.168.0.1
+            // Search for Wi-Fi network whose DHCP server (Gateway) matches the camera IP
             if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
-                // Поддръжка за различни API нива
+                // Support for different API levels
                 val dhcpAddr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     linkProperties?.dhcpServerAddress?.hostAddress
                 } else {
-                    // Fallback за по-стари версии
+                    // Fallback for older versions
                     @Suppress("DEPRECATION")
                     val gateway = wifiManager.dhcpInfo.gateway
                     String.format(
@@ -145,7 +171,7 @@ class HttpClient(context: Context) {
                     )
                 }
 
-                if (dhcpAddr == "192.168.0.1") {
+                if (dhcpAddr == cameraIp) {
                     foundCameraNetwork = network
                     this.dhcpServerIpAddress = dhcpAddr
 
@@ -161,18 +187,18 @@ class HttpClient(context: Context) {
         if (foundCameraNetwork != null) {
             if (this.cameraNetwork != foundCameraNetwork) {
                 this.cameraNetwork = foundCameraNetwork
-                // Създаваме OkHttpClient, който е вързан директно към тази мрежа
+                // Create OkHttpClient bound directly to this network
                 this.cameraClient = client.newBuilder()
                     .socketFactory(foundCameraNetwork.socketFactory)
                     .build()
-                FileLogger.logToFile(appContext, "HttpClient", "Връзката с камерата е пренасочена през Wi-Fi (дори при активни мобилни данни).")
+                FileLogger.logToFile(appContext, "HttpClient", "Bound to camera Wi-Fi network.")
             }
         } else {
             this.cameraNetwork = null
             this.cameraClient = null
-            FileLogger.logToFile(appContext, "HttpClient", "Камерата не е открита в нито една Wi-Fi мрежа.")
+            FileLogger.logToFile(appContext, "HttpClient", "Camera network not detected.")
             
-            // Ако не сме в мрежата на камерата, обновяваме стандартното инфо за активната мрежа
+            // If not on camera network, update default active network info
             val activeNetwork = connectivityManager.activeNetwork
             val activeLP = connectivityManager.getLinkProperties(activeNetwork)
             
@@ -195,16 +221,17 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Свързва се към даден URL и връща получения JSON отговор като String.
-     * Използва специалния cameraClient, ако заявката е към камерата.
+     * @brief Executes a GET request with smart network routing.
+     * @param url Full target URL.
+     * @return Response body as string or null on failure.
      */
     suspend fun executeRequest(url: String): String? {
         return withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(url).build()
                 
-                // Използваме cameraClient за заявки към 192.168.0.1
-                val activeClient = if (url.contains("192.168.0.1") && cameraClient != null) {
+                // Use cameraClient for requests to camera address
+                val activeClient = if (url.contains(cameraIp) && cameraClient != null) {
                     cameraClient!!
                 } else {
                     client
@@ -217,7 +244,7 @@ class HttpClient(context: Context) {
                     response.close()
                     responseBody
                 } else {
-                    FileLogger.logToFile(appContext, "HttpClient", "Грешка при заявка (${response.code}): $url")
+                    FileLogger.logToFile(appContext, "HttpClient", "Request failed (${response.code}): $url")
                     response.close()
                     null
                 }
@@ -229,13 +256,17 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Изтегля файл от даден URL и го записва в локална папка.
+     * @brief Downloads a file from the camera and saves it locally.
+     * @param url Source URL.
+     * @param destinationFolderPath Local directory to save the file.
+     * @param onProgress Lambda for tracking bytes downloaded.
+     * @return true if download succeeded and file is saved.
      */
-    suspend fun downloadFile(url: String, destinationFolderPath: String): Boolean {
+    suspend fun downloadFile(url: String, destinationFolderPath: String, onProgress: ((Long, Long) -> Unit)? = null): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                FileLogger.logToFile(appContext, "HttpClient", "Проба URL: $url")
-                FileLogger.logToFile(appContext, "HttpClient", "Проба цел: $destinationFolderPath")
+                FileLogger.logToFile(appContext, "HttpClient", "Attempting URL: $url")
+                FileLogger.logToFile(appContext, "HttpClient", "Target path: $destinationFolderPath")
 
                 val fileName = url.substringAfterLast('/').substringBefore('?')
                 if (fileName.isEmpty()) return@withContext false
@@ -248,8 +279,8 @@ class HttpClient(context: Context) {
                 val request = Request.Builder().url(url).build()
                 FileLogger.logToFile(appContext, "HttpClient", "Downloading from URL: $url")
                 
-                // Използваме cameraClient за изтегляне от камерата
-                val activeClient = if (url.contains("192.168.0.1") && cameraClient != null) {
+                // Use cameraClient for downloads from camera
+                val activeClient = if (url.contains(cameraIp) && cameraClient != null) {
                     cameraClient!!
                 } else {
                     client
@@ -258,39 +289,44 @@ class HttpClient(context: Context) {
                 val response = activeClient.newCall(request).execute()
 
                 if (!response.isSuccessful) {
-                    FileLogger.logToFile(appContext, "HttpClient", "Грешка при изтегляне на файл: ${response.code}")
-                    response.close() // Затваряме при грешка
+                    FileLogger.logToFile(appContext, "HttpClient", "File download failed: ${response.code}")
+                    response.close() // Close on error
                     return@withContext false
                 }
 
                 val body = response.body
                 if (body == null) {
-                    FileLogger.logToFile(appContext, "HttpClient", "Грешка: Празно тяло на отговора")
-                    response.close() // Затваряме
+                    FileLogger.logToFile(appContext, "HttpClient", "Empty response body")
+                    response.close() // Close
                     return@withContext false
                 }
 
-                // 5. Записване на файла на диска
-                // .use автоматично затваря body (което затваря и response)
+                val totalBytes = body.contentLength()
+                var bytesDownloaded = 0L
+
+                // 5. Saving file to disk
+                // .use automatically closes body (which also closes response)
                 body.use { responseBody ->
                     responseBody.byteStream().use { inputStream ->
                         FileOutputStream(destinationFile).use { outputStream ->
-                            val buffer = ByteArray(65536) // Увеличен буфер (64KB) за по-стабилен трансфер
+                            val buffer = ByteArray(65536) // Increased buffer (64KB) for stable transfer
                             var bytesRead: Int
                             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                                 outputStream.write(buffer, 0, bytesRead)
+                                bytesDownloaded += bytesRead
+                                onProgress?.invoke(bytesDownloaded, totalBytes)
                             }
                         }
                     }
                 }
 
-                return@withContext true // Успех!
+                return@withContext true // Success!
 
             } catch (e: IOException) {
                 e.printStackTrace()
                 return@withContext false
             } catch (e: SecurityException) {
-                // Възможно е да нямаме права за писане в тази папка
+                // We may not have write permissions for this folder
                 e.printStackTrace()
                 return@withContext false
             }
@@ -298,18 +334,19 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Включва или изключва режима 'Албум' на камерата.
-     * @param enable true за включване (1), false за изключване (0).
+     * @brief Toggles Album Access Mode on the camera.
+     * @param enable true to enable access (stop recording), false to resume recording.
+     * @return true on camera confirmation.
      */
     suspend fun setAlbumMode(enable: Boolean): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                updateNetworkInfo() // Гарантираме, че сме в правилната мрежа
-                val dhcp = dhcpServerIpAddress ?: "192.168.0.1"
+                updateNetworkInfo() // Ensure we are on the correct network
+                val dhcp = dhcpServerIpAddress ?: cameraIp
                 val token = sessionToken ?: return@withContext false
                 val timestamp = System.currentTimeMillis() / 1000L
-                // Обръщаме логиката според изискването: 
-                // enable=0 за включване на достъп (албум), enable=1 за запис
+                // Inverse logic according to requirement: 
+                // enable=0 to enable access (album), enable=1 for recording
                 val enableValue = if (enable) 0 else 1
                 
                 val queryPath = "setaccessalbum.cgi?"
@@ -320,7 +357,7 @@ class HttpClient(context: Context) {
                 val response = executeRequest(url)
                 
                 FileLogger.logToFile(appContext, "HttpClient", "Set album mode response: $response")
-                // Камерата връща ResultCode 0 при успех
+                // Camera returns ResultCode 0 on success
                 response?.contains("\"ResultCode\":0") == true || response?.contains("\"ResultCode\":\"0\"") == true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -330,12 +367,13 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Регистрира клиента пред камерата (Keep-alive / Phone Connected UI).
+     * @brief Registers the phone as an active client with the camera (Keep-alive).
+     * @return true if registration succeeded.
      */
     suspend fun registerClient(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val dhcp = dhcpServerIpAddress ?: "192.168.0.1"
+                val dhcp = dhcpServerIpAddress ?: cameraIp
                 val ip = currentIpAddress ?: return@withContext false
                 val token = sessionToken ?: return@withContext false
                 val timestamp = System.currentTimeMillis() / 1000L
@@ -347,7 +385,7 @@ class HttpClient(context: Context) {
                 val url = "http://$dhcp/cgi-bin/$queryPath$queryParams&-signkey=$sign"
                 val response = executeRequest(url)
                 
-                FileLogger.logToFile(appContext, "HttpClient", "Register client response: $response")
+                Log.d("HttpClient", "Register client response: $response")
                 response?.contains("success") == true || response?.contains("\"ResultCode\":0") == true || response?.contains("\"ResultCode\":\"0\"") == true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -357,13 +395,16 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Връща списък с ВСИЧКИ файлове от камерата за определен тип,
-     * като автоматично се справя с пагинацията (лимит 100 файла).
+     * @brief Fetches all files of a specific type from the camera sdcard.
+     * 
+     * Handles pagination automatically to retrieve the complete list.
+     * @param type File category type (0-15).
+     * @return List of FileInfo or null on error.
      */
     suspend fun getFileList(type: Int): List<FileInfo>? {
         return withContext(Dispatchers.IO) {
             try {
-                val dhcp = dhcpServerIpAddress ?: "192.168.0.1"
+                val dhcp = dhcpServerIpAddress ?: cameraIp
                 val token = sessionToken ?: return@withContext null
                 val allFiles = mutableListOf<FileInfo>()
                 var startIndex = 0
@@ -387,7 +428,7 @@ class HttpClient(context: Context) {
                         
                         allFiles.addAll(batch)
                         
-                        // Ако сме получили по-малко от заявените, значи няма повече
+                        // If we received fewer than requested, it means there are no more
                         if (batch.size < pageSize) break
                         
                         startIndex += pageSize
@@ -405,24 +446,23 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Изтрива файл от камерата.
-     *
-     * @param path Пътят до папката (напр. /mnt/sd/Normal/Front).
-     * @param name Името на файла (напр. NO20210103-080052-000233F.MP4).
-     * @param token Токенът за автентикация.
-     * @return true при успех, false при грешка.
+     * @brief Deletes a file from the camera's storage.
+     * @param path Remote directory path.
+     * @param name Remote filename.
+     * @param token Active session token.
+     * @return true on success confirmation.
      */
     suspend fun deleteRemoteFile(path: String, name: String, token: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val dhcp = dhcpServerIpAddress ?: "192.168.0.1"
+                val dhcp = dhcpServerIpAddress ?: cameraIp
                 val timestamp = System.currentTimeMillis() / 1000L
                 
-                // Формираме URL_Query за изтриване според спецификацията
+                // Form the URL_Query for deletion according to the specification
                 val queryPath = "delete.cgi?"
                 val queryParams = "&-path=$path&-name=$name&-timestamp=$timestamp"
                 
-                // Генерираме подписа: MD5(URI + Params + Token)
+                // Generate the signkey: MD5(URI + Params + Token)
                 val sign = generateSignKey(queryPath + queryParams, token)
                 
                 val url = "http://$dhcp/cgi-bin/$queryPath$queryParams&-signkey=$sign"
@@ -437,7 +477,7 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Изтегля файл и го изтрива от камерата само при успешно записване.
+     * @brief Orchestrates downloading a file and deleting it only if saved correctly.
      */
     suspend fun downloadAndDeleteFile(
         downloadUrl: String,
@@ -448,25 +488,28 @@ class HttpClient(context: Context) {
     ): Boolean {
         val success = downloadFile(downloadUrl, destinationFolderPath)
         if (success) {
-            println("Файлът е изтеглен успешно. Изпълнява се изтриване...")
+            println("Download success. Executing deletion...")
             return deleteRemoteFile(remotePath, remoteName, token)
         }
         return false
     }
 
+    /**
+     * @brief Quick check if connected to camera Wi-Fi.
+     */
     fun checkAuthentication(): Boolean {
         updateNetworkInfo()
-        return dhcpServerIpAddress == "192.168.0.1"
+        return dhcpServerIpAddress == cameraIp
     }
 
     /**
-     * Изпраща заявка за завършване на OTA ъпдейт.
+     * @brief Sends a configuration request to complete an OTA firmware update process.
      */
     suspend fun updateFW(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
                 updateNetworkInfo()
-                val dhcp = dhcpServerIpAddress ?: "192.168.0.1"
+                val dhcp = dhcpServerIpAddress ?: cameraIp
                 val token = sessionToken ?: return@withContext false
                 val timestamp = System.currentTimeMillis()
                 
@@ -487,15 +530,13 @@ class HttpClient(context: Context) {
     }
 
     /**
-     * Изтрива конкретен файл LOG.MP3 за целите на поддръжката.
+     * @brief Placeholder for future maintenance/exploit testing functions.
      */
     suspend fun injectFTP(): Boolean {
-//        val success = downloadFile("http://192.168.0.1/usr/bin/main_app",
-//              "/storage/emulated/0/Android/data/com.example.camhttp/files")
-        val success1 = updateFW()
-        val success = downloadFile("http://192.168.0.1/usr/bin/log/syslog_file",
+        updateFW()
+        downloadFile("http://$cameraIp/usr/bin/log/syslog_file",
             "/storage/emulated/0/Android/data/com.lz1bgb.camhttp/files")
-        val success2 = downloadFile("http://192.168.0.1/usr/bin/ota_run",
+        downloadFile("http://$cameraIp/usr/bin/ota_run",
             "/storage/emulated/0/Android/data/com.lz1bgb.camhttp/files")
 
         val token = sessionToken ?: return false

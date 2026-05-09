@@ -2,7 +2,14 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.CamHttp" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:textColorPrimary">@color/on_background_dark</item>
+        <item name="android:textColorSecondary">#B0B0B0</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">#2196F3</item>
+        <item name="colorSurface">@color/surface_dark</item>
+        <item name="colorOnSurface">@color/on_background_dark</item>
+        <item name="android:editTextColor">@color/on_background_dark</item>
     </style>
 
     <style name="Theme.CamHttp" parent="Base.Theme.CamHttp" />
