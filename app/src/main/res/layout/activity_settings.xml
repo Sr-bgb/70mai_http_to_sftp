@@ -56,7 +56,7 @@
                     <androidx.constraintlayout.helper.widget.Flow
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        app:constraint_referenced_ids="okButton, clrCount, clrToken, infoButton, stopButton, sleepButton, albumButton, injectButton"
+                        app:constraint_referenced_ids="okButton, connectWifiButton, clrCount, clrToken, infoButton, stopButton, sleepButton, albumButton, injectButton"
                         app:flow_horizontalBias="0.5"
                         app:flow_horizontalGap="8dp"
                         app:flow_horizontalStyle="packed"
@@ -72,6 +72,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/btn_start" />
+
+                    <Button
+                        android:id="@+id/connectWifiButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_connect_wifi" />
 
                     <Button
                         android:id="@+id/clrCount"
@@ -311,14 +318,6 @@
                     android:layout_height="wrap_content"
                     android:hint="Password"
                     android:inputType="textPassword" />
-
-                <Button
-                    android:id="@+id/connectWifiButton"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/btn_connect_wifi" />
 
                 <TextView
                     style="@style/TextAppearance.AppCompat.Title"
