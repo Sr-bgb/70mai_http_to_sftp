@@ -486,28 +486,28 @@ class HttpClient(context: Context) {
     /**
      * @brief Orchestrates downloading a file and deleting it only if saved correctly.
      */
-    suspend fun downloadAndDeleteFile(
-        downloadUrl: String,
-        remotePath: String,
-        remoteName: String,
-        destinationFolderPath: String,
-        token: String
-    ): Boolean {
-        val success = downloadFile(downloadUrl, destinationFolderPath)
-        if (success) {
-            println("Download success. Executing deletion...")
-            return deleteRemoteFile(remotePath, remoteName, token)
-        }
-        return false
-    }
+//    suspend fun downloadAndDeleteFile(
+//        downloadUrl: String,
+//        remotePath: String,
+//        remoteName: String,
+//        destinationFolderPath: String,
+//        token: String
+//    ): Boolean {
+//        val success = downloadFile(downloadUrl, destinationFolderPath)
+//        if (success) {
+//            println("Download success. Executing deletion...")
+//            return deleteRemoteFile(remotePath, remoteName, token)
+//        }
+//        return false
+//    }
 
     /**
      * @brief Quick check if connected to camera Wi-Fi.
      */
-    fun checkAuthentication(): Boolean {
-        updateNetworkInfo()
-        return dhcpServerIpAddress == cameraIp
-    }
+//    fun checkAuthentication(): Boolean {
+//        updateNetworkInfo()
+//        return dhcpServerIpAddress == cameraIp
+//    }
 
     /**
      * @brief Sends a configuration request to complete an OTA firmware update process.

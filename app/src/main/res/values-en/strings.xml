@@ -13,8 +13,6 @@
     <string name="label_network">Network</string>
     <string name="cam_settings_title">Camera Settings</string>
     <string name="cam_ip_hint">e.g. 192.168.1.1</string>
-    <string name="cam_user_hint">HTTP User Number</string>
-    <string name="cam_pass_hint">HTTP Key</string>
     <string name="archive_settings_title">Archive Settings (SFTP)</string>
     <string name="archive_ip_hint">SFTP Server IP</string>
     <string name="archive_user_hint">SFTP Username</string>
@@ -42,7 +40,7 @@
     <string name="label_pending_sftp">Remaining for Upload: %1$d</string>
     <string name="label_current_file">File: %1$s</string>
     <string name="label_current_speed">Speed: %1$s</string>
-    <string name="status_running">Transfer cycle running...</string>
+    <string name="status_running">Transfer cycle running&#8230;</string>
     <string name="status_waiting_initial">Waiting for initial check.</string>
     <string name="status_waiting_start">Waiting to start check.</string>
     <string name="status_next_check">Idle. Next check in %1$dm %2$ds.</string>

@@ -8,7 +8,7 @@ import kotlin.random.Random
 /**
  * @brief Class handling the 70mai dashcam pairing and authentication protocol.
  * 
- * Implements the multi-step handshake required to obtain a session token:
+ * Implements the multistep handshake required to obtain a session token:
  * 1. Initial Binding (BindByBanya)
  * 2. User Confirmation (UserconfirmByBanya - physical button press)
  * 3. Client Registration (client.cgi - keep-alive)

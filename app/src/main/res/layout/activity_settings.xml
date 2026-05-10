@@ -370,7 +370,7 @@
                     android:id="@+id/camSSIDTxt"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@стрин/label_access_point"
+                    android:hint="@string/label_access_point"
                     android:importantForAutofill="no"
                     android:inputType="text" />
 

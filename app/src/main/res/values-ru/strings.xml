@@ -13,8 +13,6 @@
     <string name="label_network">Сеть</string>
     <string name="cam_settings_title">Настройки камеры</string>
     <string name="cam_ip_hint">Напр. 192.168.1.1</string>
-    <string name="cam_user_hint">Пользовательский номер HTTP</string>
-    <string name="cam_pass_hint">Ключ HTTP</string>
     <string name="archive_settings_title">Настройки архива (SFTP)</string>
     <string name="archive_ip_hint">IP-адрес SFTP-сервера</string>
     <string name="archive_user_hint">Имя пользователя SFTP</string>
@@ -42,7 +40,7 @@
     <string name="label_pending_sftp">Осталось для выгрузки: %1$d</string>
     <string name="label_current_file">Файл: %1$s</string>
     <string name="label_current_speed">Скорость: %1$s</string>
-    <string name="status_running">Цикл передачи запущен...</string>
+    <string name="status_running">Цикл передачи запущен&#8230;</string>
     <string name="status_waiting_initial">Ожидание начальной проверки.</string>
     <string name="status_waiting_start">Ожидание начала проверки.</string>
     <string name="status_next_check">Ожидание. Следующая проверка через %1$dм %2$dс.</string>

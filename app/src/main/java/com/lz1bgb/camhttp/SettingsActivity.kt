@@ -3,7 +3,7 @@ package com.lz1bgb.camhttp
 import android.Manifest
 import android.app.ActivityManager
 import android.content.ComponentName
-import android.content.Context
+//import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
@@ -20,7 +20,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.AdapterView
@@ -58,13 +57,7 @@ class SettingsActivity : AppCompatActivity() {
     private val isServiceRunning: Boolean
         get() {
             manualServiceState?.let { return it }
-            val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            for (service in manager.getRunningServices(100)) {
-                if (FileTransferService::class.java.name == service.service.className) {
-                    return service.foreground
-                }
-            }
-            return false
+            return FileTransferService.isServiceRunningInForeground
         }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -243,11 +236,7 @@ class SettingsActivity : AppCompatActivity() {
                     putString("PATH_SERVER", binding.backupPathTxt.text.toString())
                 }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
+                startForegroundService(serviceIntent)
                 Toast.makeText(this, "Service Started.", Toast.LENGTH_SHORT).show()
             } else {
                 // STOP

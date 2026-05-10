@@ -40,29 +40,29 @@ enum class UploadStatus {
  */
 class SftpUpload(private val context: Context) {
 
-    /**
-     * @brief Main public method that executes the upload cycle:
-     * 1. Scans for local files in the "camera" folder.
-     * 2. For each file, uploads it to the remote server and deletes the local copy upon success.
-     */
-    suspend fun processLocalFiles(){
-        val filesToUpload = getLocalFilesToUpload()
-
-        if (filesToUpload.isEmpty()) {
-            FileLogger.logToFile(context, "SftpUpload", "No local files found for upload.")
-            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
-            prefsStat.edit {
-                putString("SFTP_STATUS", "No files for upload.")
-            }
-            return
-        }
-
-        FileLogger.logToFile(context, "SftpUpload", "Found ${filesToUpload.size} files for upload. Starting process...")
-        filesToUpload.forEach { fileInfo ->
-            val status = uploadAndDeleteFile(fileInfo)
-            Log.i("SftpUpload", "Processing of '${fileInfo.name}' finished with status: $status")
-        }
-    }
+//    /**
+//     * @brief Main public method that executes the upload cycle:
+//     * 1. Scans for local files in the "camera" folder.
+//     * 2. For each file, uploads it to the remote server and deletes the local copy upon success.
+//     */
+//    suspend fun processLocalFiles(){
+//        val filesToUpload = getLocalFilesToUpload()
+//
+//        if (filesToUpload.isEmpty()) {
+//            FileLogger.logToFile(context, "SftpUpload", "No local files found for upload.")
+//            val prefsStat = context.getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+//            prefsStat.edit {
+//                putString("SFTP_STATUS", "No files for upload.")
+//            }
+//            return
+//        }
+//
+//        FileLogger.logToFile(context, "SftpUpload", "Found ${filesToUpload.size} files for upload. Starting process...")
+//        filesToUpload.forEach { fileInfo ->
+//            val status = uploadAndDeleteFile(fileInfo)
+//            Log.i("SftpUpload", "Processing of '${fileInfo.name}' finished with status: $status")
+//        }
+//    }
 
     /**
      * @brief Scans the internal app storage for files downloaded from the camera.
@@ -249,7 +249,7 @@ class SftpUpload(private val context: Context) {
                 // If directory, recurse
                 scanDirectoryRecursive(file, rootPath, fileList)
             } else {
-                // If file, calculate relative path and add to list
+                // If the file, calculate relative path and add to list
                 val relativePath = file.parentFile?.absolutePath?.removePrefix(rootPath)?.trimStart('/') ?: ""
                 val fileInfo = LocalFileInfo(
                     fullPath = file.absolutePath,

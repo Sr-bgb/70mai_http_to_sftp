@@ -48,6 +48,11 @@ data class ServiceStatus(
  */
 class FileTransferService : Service(){
 
+    companion object {
+        var isServiceRunningInForeground = false
+            private set
+    }
+
     private var job = SupervisorJob()
     private var scope = CoroutineScope(Dispatchers.IO + job)
 
@@ -60,6 +65,7 @@ class FileTransferService : Service(){
     private val checkInterval: Long = 30 * 1000 // 30 seconds
 
     private val isTaskRunning = AtomicBoolean(false)
+    private val isScheduled = AtomicBoolean(false)
     private var nextExecutionTime: Long = 0L
 
     // Binder for communication with Activity
@@ -303,6 +309,7 @@ class FileTransferService : Service(){
 
     private fun scheduleNextRun() {
         nextExecutionTime = System.currentTimeMillis() + checkInterval
+        isScheduled.set(true)
         handler.postDelayed(periodicCheck, checkInterval)
         FileLogger.logToFile(this, "FileService", "Next check scheduled.")
     }
@@ -320,6 +327,7 @@ class FileTransferService : Service(){
 
     fun stopTransfer() {
         handler.removeCallbacks(periodicCheck)
+        isScheduled.set(false)
         job.cancel() 
         isTaskRunning.set(false)
         nextExecutionTime = 0L
@@ -333,8 +341,10 @@ class FileTransferService : Service(){
 
     override fun onDestroy() {
         super.onDestroy()
+        isServiceRunningInForeground = false
         // Stop scheduled checks
         handler.removeCallbacks(periodicCheck)
+        isScheduled.set(false)
         // Cancel all active Coroutines
         job.cancel()
         FileLogger.logToFile(this, "FileService", "Service stopped and cleaned up.")
@@ -350,10 +360,12 @@ class FileTransferService : Service(){
         } else {
             startForeground(1, notification)
         }
+        isServiceRunningInForeground = true
 
         // Only start if not already scheduled or running
-        if (!isTaskRunning.get()) {
+        if (!isTaskRunning.get() && !isScheduled.get()) {
             handler.removeCallbacks(periodicCheck)
+            isScheduled.set(true)
             handler.post(periodicCheck) 
         }
 
@@ -382,7 +394,7 @@ class FileTransferService : Service(){
         val remainingMillis = nextExecutionTime - now
 
         val generalStatus = when {
-            handler.hasCallbacks(periodicCheck) || isTaskRunning.get() -> {
+            isScheduled.get() || isTaskRunning.get() -> {
                 if (isTaskRunning.get()) {
                     getString(R.string.status_running)
                 } else if (nextExecutionTime == 0L) {
