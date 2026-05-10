@@ -5,8 +5,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
+//import java.net.HttpURLConnection
+//import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -16,7 +16,7 @@ import android.util.Log
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.io.FileOutputStream
-import java.io.OutputStream
+//import java.io.OutputStream
 import androidx.core.content.edit
 import android.net.ConnectivityManager
 import android.net.Network
@@ -58,7 +58,7 @@ class HttpClient(context: Context) {
     /** 
      * @brief Application context to avoid memory leaks.
      */
-    val appContext = context.applicationContext
+    val appContext: Context = context.applicationContext
 
     /**
      * @brief Current local IPv4 address of the phone.
@@ -249,6 +249,7 @@ class HttpClient(context: Context) {
                     null
                 }
             } catch (e: IOException) {
+                FileLogger.logToFile(appContext, "HttpClient", "Execute request IOException: ${e.message}")
                 e.printStackTrace()
                 null
             }
@@ -323,10 +324,12 @@ class HttpClient(context: Context) {
                 return@withContext true // Success!
 
             } catch (e: IOException) {
+                FileLogger.logToFile(appContext, "HttpClient", "Download file IOException: ${e.message}")
                 e.printStackTrace()
                 return@withContext false
             } catch (e: SecurityException) {
                 // We may not have write permissions for this folder
+                FileLogger.logToFile(appContext, "HttpClient", "Download file SecurityException: ${e.message}")
                 e.printStackTrace()
                 return@withContext false
             }
@@ -360,6 +363,7 @@ class HttpClient(context: Context) {
                 // Camera returns ResultCode 0 on success
                 response?.contains("\"ResultCode\":0") == true || response?.contains("\"ResultCode\":\"0\"") == true
             } catch (e: Exception) {
+                FileLogger.logToFile(appContext, "HttpClient", "Delete remote file error: ${e.message}")
                 e.printStackTrace()
                 false
             }
@@ -388,6 +392,7 @@ class HttpClient(context: Context) {
                 Log.d("HttpClient", "Register client response: $response")
                 response?.contains("success") == true || response?.contains("\"ResultCode\":0") == true || response?.contains("\"ResultCode\":\"0\"") == true
             } catch (e: Exception) {
+                FileLogger.logToFile(appContext, "HttpClient", "Delete remote file error: ${e.message}")
                 e.printStackTrace()
                 false
             }
@@ -439,6 +444,7 @@ class HttpClient(context: Context) {
                 
                 if (allFiles.isNotEmpty()) allFiles else null
             } catch (e: Exception) {
+                FileLogger.logToFile(appContext, "HttpClient", "Get file list error: ${e.message}")
                 e.printStackTrace()
                 null
             }
@@ -470,6 +476,7 @@ class HttpClient(context: Context) {
 
                 responseJson != null && responseJson.contains("\"ResultCode\":\"0\"")
             } catch (e: Exception) {
+                FileLogger.logToFile(appContext, "HttpClient", "Update FW error: ${e.message}")
                 e.printStackTrace()
                 false
             }
@@ -523,6 +530,7 @@ class HttpClient(context: Context) {
                 FileLogger.logToFile(appContext!!, "HttpClient", "Update FW response: $response")
                 response?.contains("\"ResultCode\":0") == true || response?.contains("\"ResultCode\":\"0\"") == true
             } catch (e: Exception) {
+                FileLogger.logToFile(appContext, "HttpClient", "Update FW error: ${e.message}")
                 e.printStackTrace()
                 false
             }

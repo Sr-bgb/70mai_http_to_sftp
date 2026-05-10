@@ -233,6 +233,7 @@ class SftpUpload(private val context: Context) {
                     FileLogger.logToFile(context, "SftpUpload", "Creating remote directory: $currentPath")
                     channel.mkdir(currentPath)
                 } else {
+                    FileLogger.logToFile(context, "SftpUpload", "SftpException during mkdir: ${e.message}")
                     throw e
                 }
             }

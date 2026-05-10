@@ -21,8 +21,8 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.io.File
 import java.util.Locale
-import java.util.Date
-import java.util.Calendar
+//import java.util.Date
+//import java.util.Calendar
 
 /**
  * @brief Data class for reporting service status to the UI.
@@ -48,8 +48,8 @@ data class ServiceStatus(
  */
 class FileTransferService : Service(){
 
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.IO + job)
+    private var job = SupervisorJob()
+    private var scope = CoroutineScope(Dispatchers.IO + job)
 
     private lateinit var httpClient: HttpClient
     private lateinit var httpAuth: HttpAuthentication
@@ -74,15 +74,19 @@ class FileTransferService : Service(){
     private val periodicCheck = Runnable {
         // Start the check and transfer cycle
         if (isTaskRunning.compareAndSet(false, true)) {
+            nextExecutionTime = 0L // Reset while running
             scope.launch {
                 try {
                     FileLogger.logToFile(this@FileTransferService, "FileService", "Starting periodic check...")
                     performTransferCycle()
                 } catch (e: Exception) {
+                    FileLogger.logToFile(this@FileTransferService, "FileService", "Error in cycle: ${e.message}")
                     Log.e("FileService", "Error in cycle: ${e.message}")
                 } finally {
                     isTaskRunning.set(false)
-                    scheduleNextRun()
+                    if (job.isActive) {
+                        scheduleNextRun()
+                    }
                 }
             }
         } else {
@@ -136,8 +140,9 @@ class FileTransferService : Service(){
                 updateStatus(null, null, getString(R.string.msg_sftp_idle), "IDLE")
             }
         } catch (e: Exception) {
+            FileLogger.logToFile(this, "FileService", "SFTP error: ${e.message}")
             Log.e("FileService", "SFTP error: ${e.message}")
-            updateStatus(null, null, "SFTP: Error during upload", "ERROR")
+            updateStatus(null, null, getString(R.string.msg_sftp_success), "ERROR")
         }
     }
 
@@ -313,6 +318,19 @@ class FileTransferService : Service(){
         sftpUpload = SftpUpload(this)
     }
 
+    fun stopTransfer() {
+        handler.removeCallbacks(periodicCheck)
+        job.cancel() 
+        isTaskRunning.set(false)
+        nextExecutionTime = 0L
+        
+        // Re-initialize job and scope for the next Start command
+        job = SupervisorJob()
+        scope = CoroutineScope(Dispatchers.IO + job)
+        
+        FileLogger.logToFile(this, "FileService", "Transfer manually stopped and reset.")
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         // Stop scheduled checks
@@ -325,15 +343,19 @@ class FileTransferService : Service(){
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = createNotification()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
             startForeground(1, notification)
         }
 
-        // Stop any previous tasks and start new one
-        handler.removeCallbacks(periodicCheck)
-        handler.post(periodicCheck) // Start immediately the first time
+        // Only start if not already scheduled or running
+        if (!isTaskRunning.get()) {
+            handler.removeCallbacks(periodicCheck)
+            handler.post(periodicCheck) 
+        }
 
         return START_STICKY
     }
@@ -348,9 +370,10 @@ class FileTransferService : Service(){
 
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, "FileTransferChannel")
-            .setContentTitle("File Transfer")
-            .setContentText("Service is active and checking periodically.")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.foreground_service_justification))
             .setSmallIcon(R.drawable.ic_notification_sync)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
 
@@ -359,14 +382,20 @@ class FileTransferService : Service(){
         val remainingMillis = nextExecutionTime - now
 
         val generalStatus = when {
-            isTaskRunning.get() -> getString(R.string.status_running)
-            nextExecutionTime == 0L -> getString(R.string.status_waiting_initial)
-            remainingMillis <= 0 -> getString(R.string.status_waiting_start)
-            else -> {
-                val minutes = (remainingMillis / 1000) / 60
-                val seconds = (remainingMillis / 1000) % 60
-                getString(R.string.status_next_check, minutes, seconds)
+            handler.hasCallbacks(periodicCheck) || isTaskRunning.get() -> {
+                if (isTaskRunning.get()) {
+                    getString(R.string.status_running)
+                } else if (nextExecutionTime == 0L) {
+                    getString(R.string.status_waiting_initial)
+                } else if (remainingMillis <= 0) {
+                    getString(R.string.status_waiting_start)
+                } else {
+                    val minutes = (remainingMillis / 1000) / 60
+                    val seconds = (remainingMillis / 1000) % 60
+                    getString(R.string.status_next_check, minutes, seconds)
+                }
             }
+            else -> "Status: Stopped"
         }
         val statsPrefs = getSharedPreferences("FtpStats", MODE_PRIVATE)
         val totalDownloads = statsPrefs.getInt("TOTAL_DOWNLOADS", 0)

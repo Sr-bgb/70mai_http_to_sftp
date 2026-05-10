@@ -113,6 +113,7 @@ class HttpAuthentication(private val httpClient: HttpClient) {
 
             false
         } catch (e: Exception) {
+            FileLogger.logToFile(httpClient.appContext, "HttpAuth", "Authentication error: ${e.message}")
             Log.e("HttpAuth", "Authentication error: ${e.message}")
             false
         }
@@ -126,6 +127,7 @@ class HttpAuthentication(private val httpClient: HttpClient) {
             val bytes = MessageDigest.getInstance("MD5").digest(input.toByteArray())
             bytes.joinToString("") { "%02x".format(it) }
         } catch (e: Exception) {
+            FileLogger.logToFile(httpClient.appContext, "HttpAuth", "MD5 Hash error: ${e.message}")
             "" 
         }
     }
@@ -148,6 +150,7 @@ class HttpAuthentication(private val httpClient: HttpClient) {
                 afterKey.split(Regex("[,}]"))[0].trim()
             }
         } catch (e: Exception) {
+            FileLogger.logToFile(httpClient.appContext, "HttpAuth", "JSON Extraction error: ${e.message}")
             ""
         }
     }

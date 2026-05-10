@@ -1,15 +1,17 @@
 package com.lz1bgb.camhttp
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
+//import android.net.ConnectivityManager
+//import android.net.NetworkCapabilities
+//import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSuggestion
 import android.os.Build
@@ -26,9 +28,11 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -48,6 +52,20 @@ class SettingsActivity : AppCompatActivity() {
 
     private var isModeActive = false
     private var isAlbumActive = false
+    
+    private var manualServiceState: Boolean? = null
+
+    private val isServiceRunning: Boolean
+        get() {
+            manualServiceState?.let { return it }
+            val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            for (service in manager.getRunningServices(100)) {
+                if (FileTransferService::class.java.name == service.service.className) {
+                    return service.foreground
+                }
+            }
+            return false
+        }
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -61,21 +79,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
     
-    /**
-     * @brief Injects the saved locale into the activity context before creation.
-     */
-    override fun attachBaseContext(newBase: Context) {
-        val langPrefs = newBase.getSharedPreferences("AppSettings", MODE_PRIVATE)
-        val langCode = langPrefs.getString("App_Language", "bg") ?: "bg"
-        val locale = java.util.Locale(langCode)
-        java.util.Locale.setDefault(locale)
-        
-        val config = newBase.resources.configuration
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
-
     private val updateTask = object : Runnable {
         override fun run() {
             refreshServiceStatus()
@@ -91,12 +94,14 @@ class SettingsActivity : AppCompatActivity() {
             val binder = service as FileTransferService.LocalBinder
             fileTransferService = binder.getService()
             isBound = true
+            updateStartStopButtonUI()
             FileLogger.logToFile(this@SettingsActivity, "SettingsActivity", "Service connected")
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
             isBound = false
             fileTransferService = null
+            updateStartStopButtonUI()
             FileLogger.logToFile(this@SettingsActivity, "SettingsActivity", "Service disconnected")
         }
     }
@@ -114,24 +119,28 @@ class SettingsActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         handler.removeCallbacks(updateTask)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        handler.post(updateTask)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
         if (isBound) {
             unbindService(connection)
             isBound = false
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        Intent(this, FileTransferService::class.java).also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
-        handler.post(updateTask)
-    }
-
     private fun refreshServiceStatus() {
+        if (manualServiceState == null) {
+            updateStartStopButtonUI()
+        }
         if (isBound && fileTransferService != null) {
             val status = fileTransferService!!.getServiceStatus()
-
+            
             binding.statusTextView.text = status.generalStatus
             binding.lastDownloadResultTextView.text = getString(R.string.label_last_download, status.lastDownloadResult)
             binding.totalFilesDownloadedTextView.text = getString(R.string.label_total_downloaded, status.totalFilesDownloaded)
@@ -159,6 +168,18 @@ class SettingsActivity : AppCompatActivity() {
             binding.lastUploadResultTextView.visibility = View.VISIBLE
             binding.totalFilesUploadedTextView.visibility = View.VISIBLE
             binding.pendingSftpFilesTextView.visibility = View.VISIBLE
+        } else {
+            updateStartStopButtonUI()
+        }
+    }
+
+    private fun updateStartStopButtonUI() {
+        if (isServiceRunning) {
+            binding.startStopButton.text = getString(R.string.btn_stop)
+            binding.startStopButton.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.toggle_stop))
+        } else {
+            binding.startStopButton.text = getString(R.string.btn_start)
+            binding.startStopButton.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.toggle_start))
         }
     }
 
@@ -177,11 +198,15 @@ class SettingsActivity : AppCompatActivity() {
         httpClient = HttpClient(this)
         setupLanguageSpinner()
         setupTabs()
-        
-        val prefs = getSharedPreferences("FtpSettings", Context.MODE_PRIVATE)
-        val statsPrefs = getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
 
-        // Load saved settings
+        // Bind to service if it's already running or to allow it to be created
+        Intent(this, FileTransferService::class.java).also { intent ->
+            bindService(intent, connection, BIND_AUTO_CREATE)
+        }
+        
+        val prefs = getSharedPreferences("FtpSettings", MODE_PRIVATE)
+        val statsPrefs = getSharedPreferences("FtpStats", MODE_PRIVATE)
+
         binding.camIPTxt.setText(prefs.getString("IP_CAM", ""))
         binding.camSSIDTxt.setText(prefs.getString("SSID_CAM", ""))
         binding.camWifiPassTxt.setText(prefs.getString("PASS_WIFI_CAM", ""))
@@ -191,6 +216,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.backupPassTxt.setText(prefs.getString("PASS_SERVER", ""))
         binding.backupPathTxt.setText(prefs.getString("PATH_SERVER", ""))
 
+        // Display initial counters
         val initialTotalDownloads = statsPrefs.getInt("TOTAL_DOWNLOADS", 0)
         binding.totalFilesDownloadedTextView.text = getString(R.string.label_total_downloaded, initialTotalDownloads)
         binding.totalFilesDownloadedTextView.visibility = View.VISIBLE
@@ -199,41 +225,49 @@ class SettingsActivity : AppCompatActivity() {
         binding.totalFilesUploadedTextView.text = getString(R.string.label_total_uploaded, initialTotalUploads)
         binding.totalFilesUploadedTextView.visibility = View.VISIBLE
 
-        binding.okButton.setOnClickListener {
-            prefs.edit {
-                putString("IP_CAM", binding.camIPTxt.text.toString())
-                putString("SSID_CAM", binding.camSSIDTxt.text.toString())
-                putString("PASS_WIFI_CAM", binding.camWifiPassTxt.text.toString())
-                putString("IP_SERVER", binding.backupIPTxt.text.toString())
-                putString("USER_SERVER", binding.backupUserTxt.text.toString())
-                putString("PASS_SERVER", binding.backupPassTxt.text.toString())
-                putString("PATH_SERVER", binding.backupPathTxt.text.toString())
-            }
-
+        /**
+         * Toggle button logic for Start/Stop
+         */
+        binding.startStopButton.setOnClickListener {
             val serviceIntent = Intent(this, FileTransferService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
+            if (!isServiceRunning) {
+                // START
+                manualServiceState = true
+                prefs.edit {
+                    putString("IP_CAM", binding.camIPTxt.text.toString())
+                    putString("SSID_CAM", binding.camSSIDTxt.text.toString())
+                    putString("PASS_WIFI_CAM", binding.camWifiPassTxt.text.toString())
+                    putString("IP_SERVER", binding.backupIPTxt.text.toString())
+                    putString("USER_SERVER", binding.backupUserTxt.text.toString())
+                    putString("PASS_SERVER", binding.backupPassTxt.text.toString())
+                    putString("PATH_SERVER", binding.backupPathTxt.text.toString())
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+                Toast.makeText(this, "Service Started.", Toast.LENGTH_SHORT).show()
             } else {
-                startService(serviceIntent)
+                // STOP
+                manualServiceState = false
+                if (isBound && fileTransferService != null) {
+                    fileTransferService!!.stopTransfer()
+                }
+                stopService(serviceIntent)
+                Toast.makeText(this, "Service Stopped.", Toast.LENGTH_SHORT).show()
             }
-            Toast.makeText(this, "Service Started.", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.infoButton.setOnClickListener {
-            refreshServiceStatus()
-            if (!isBound || fileTransferService == null) {
-                Toast.makeText(this, "Service not active.", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        binding.stopButton.setOnClickListener {
-            val serviceIntent = Intent(this, FileTransferService::class.java)
-            stopService(serviceIntent)
-            Toast.makeText(this, "Service Stopped.", Toast.LENGTH_SHORT).show()
+            updateStartStopButtonUI()
+            // Clear manual override after a delay to let system status take over
+//            handler.postDelayed({
+//                manualServiceState = null
+//                updateStartStopButtonUI()
+//            }, 2000)
         }
 
         binding.clrCount.setOnClickListener {
-            val sp = getSharedPreferences("FtpStats", Context.MODE_PRIVATE)
+            val sp = getSharedPreferences("FtpStats", MODE_PRIVATE)
             sp.edit {
                 putInt("TOTAL_DOWNLOADS", 0)
                 putInt("TOTAL_UPLOADS", 0)
@@ -248,7 +282,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         binding.clrToken.setOnClickListener {
-            val cp = getSharedPreferences("CamSettings", Context.MODE_PRIVATE)
+            val cp = getSharedPreferences("CamSettings", MODE_PRIVATE)
             cp.edit { remove("SESSION_TOKEN") }
             Toast.makeText(this, "Token Reset. New pairing required.", Toast.LENGTH_SHORT).show()
         }
@@ -339,7 +373,7 @@ class SettingsActivity : AppCompatActivity() {
             return
         }
 
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // 1. First suggest the network for auto-connection (requires password)
@@ -367,8 +401,9 @@ class SettingsActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.languageSpinner.adapter = adapter
 
-        val langPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-        val currentLang = langPrefs.getString("App_Language", "bg") ?: "bg"
+        // Get current language from AppCompatDelegate
+        val currentLocales = AppCompatDelegate.getApplicationLocales()
+        val currentLang = if (!currentLocales.isEmpty) currentLocales.get(0)?.language ?: "bg" else "bg"
         
         val selection = when (currentLang) {
             "bg" -> 0
@@ -389,9 +424,9 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 
                 if (langCode != currentLang) {
-                    val lp = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-                    lp.edit { putString("App_Language", langCode) }
-                    recreate()
+                    // Modern way to set application locales
+                    val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(langCode)
+                    AppCompatDelegate.setApplicationLocales(appLocale)
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}

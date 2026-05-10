@@ -1,13 +1,16 @@
 <resources>
+    <string name="foreground_service_justification">Приложението изисква връзка с камерата за изтегляне на видео записи дори когато екранът е изключен.</string>
     <string name="app_name">HTTP 70MAI dashcam transfer</string>
     <string name="btn_start">Старт</string>
-    <string name="btn_stat">Стат</string>
+    <string name="btn_stat">Статистика</string>
     <string name="btn_token">Токен</string>
-    <string name="btn_info">Инфо</string>
     <string name="btn_stop">Стоп</string>
     <string name="btn_no_sleep">Не заспива</string>
-    <string name="btn_album">Албум</string>
+    <string name="btn_album">Режим Албум</string>
     <string name="btn_inject">Инжект</string>
+    <string name="label_reset">Нулиране</string>
+    <string name="label_functions">Функции</string>
+    <string name="label_network">Мрежа</string>
     <string name="cam_settings_title">Настройки за Камера</string>
     <string name="cam_ip_hint">Напр. 192.168.1.1</string>
     <string name="cam_user_hint">Потребителски номер за HTTP</string>
@@ -46,4 +49,6 @@
     <string name="msg_http_success">HTTP: Цикълът завърши</string>
     <string name="msg_sftp_success">SFTP: Файловете са качени</string>
     <string name="msg_sftp_idle">SFTP: Няма файлове за качване</string>
+    <string name="label_access_point">70mai_d08_xxxx</string>
+    <string name="label_access_point_password">Парола</string>
 </resources>

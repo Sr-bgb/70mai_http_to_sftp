@@ -53,83 +53,149 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <androidx.constraintlayout.helper.widget.Flow
+                    <!-- Main Toggle Button -->
+                    <Button
+                        android:id="@+id/startStopButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        app:constraint_referenced_ids="okButton, connectWifiButton, clrCount, clrToken, infoButton, stopButton, sleepButton, albumButton, injectButton"
-                        app:flow_horizontalBias="0.5"
-                        app:flow_horizontalGap="8dp"
-                        app:flow_horizontalStyle="packed"
-                        app:flow_verticalGap="8dp"
-                        app:flow_wrapMode="chain"
+                        android:layout_height="64dp"
+                        android:text="@string/btn_start"
+                        android:textColor="@color/black"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        app:backgroundTint="@color/toggle_start"
+                        app:cornerRadius="12dp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintWidth_percent="0.65" />
 
-                    <Button
-                        android:id="@+id/okButton"
-                        style="?attr/materialButtonStyle"
+                    <!-- Reset Section -->
+                    <TextView
+                        android:id="@+id/resetLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_start" />
-
-                    <Button
-                        android:id="@+id/connectWifiButton"
-                        style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_connect_wifi" />
+                        android:layout_marginTop="16dp"
+                        android:text="@string/label_reset"
+                        android:textColor="#B0B0B0"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/startStopButton" />
 
                     <Button
                         android:id="@+id/clrCount"
-                        style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
+                        style="?attr/materialButtonStyle"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_stat" />
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/btn_stat"
+                        android:textSize="12sp"
+                        app:backgroundTint="@android:color/holo_red_dark"
+                        app:layout_constraintEnd_toStartOf="@+id/clrToken"
+                        app:layout_constraintHorizontal_bias="0.5"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/resetLabel" />
 
                     <Button
                         android:id="@+id/clrToken"
-                        style="?attr/materialButtonOutlinedStyle"
+                        style="?attr/materialButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/btn_token"
+                        android:textSize="12sp"
+                        app:backgroundTint="@android:color/holo_red_dark"
+                        app:layout_constraintBottom_toBottomOf="@+id/clrCount"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="0.5"
+                        app:layout_constraintStart_toEndOf="@+id/clrCount"
+                        app:layout_constraintTop_toTopOf="@+id/clrCount" />
+
+                    <!-- Functions Section -->
+                    <TextView
+                        android:id="@+id/functionsLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_token" />
+                        android:layout_marginTop="16dp"
+                        android:text="@string/label_functions"
+                        android:textColor="#B0B0B0"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/clrCount" />
 
-                    <Button
-                        android:id="@+id/infoButton"
-                        style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_info" />
-
-                    <Button
-                        android:id="@+id/stopButton"
-                        style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_stop"
-                        android:textColor="@android:color/holo_red_dark"
-                        app:strokeColor="@android:color/holo_red_dark" />
-
+                    <!-- Sleep and Album Buttons Row (Guaranteed 50/50 split of 80% total) -->
                     <Button
                         android:id="@+id/sleepButton"
                         style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_no_sleep" />
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/btn_no_sleep"
+                        app:layout_constraintEnd_toStartOf="@+id/albumButton"
+                        app:layout_constraintHorizontal_chainStyle="packed"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/functionsLabel"
+                        app:layout_constraintWidth_percent="0.4" />
 
                     <Button
                         android:id="@+id/albumButton"
                         style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_album" />
+                        android:layout_marginStart="4dp"
+                        android:text="@string/btn_album"
+                        app:layout_constraintBottom_toBottomOf="@+id/sleepButton"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/sleepButton"
+                        app:layout_constraintTop_toTopOf="@+id/sleepButton"
+                        app:layout_constraintWidth_percent="0.4" />
 
+                    <!-- Inject Button centered below -->
                     <Button
                         android:id="@+id/injectButton"
                         style="?attr/materialButtonOutlinedStyle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_inject" />
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_inject"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/sleepButton" />
+
+                    <!-- Network Section -->
+                    <TextView
+                        android:id="@+id/networkLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/label_network"
+                        android:textColor="#B0B0B0"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/injectButton" />
+
+                    <Button
+                        android:id="@+id/connectWifiButton"
+                        style="?attr/materialButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/btn_connect_wifi"
+                        android:textColor="@color/white"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/purple_500"
+                        app:cornerRadius="8dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/networkLabel"
+                        app:layout_constraintWidth_percent="0.65" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -291,6 +357,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/cam_ip_hint"
+                    android:importantForAutofill="no"
                     android:inputType="text" />
 
                 <TextView
@@ -303,7 +370,8 @@
                     android:id="@+id/camSSIDTxt"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="70mai_d08_xxxx"
+                    android:hint="@стрин/label_access_point"
+                    android:importantForAutofill="no"
                     android:inputType="text" />
 
                 <TextView
@@ -316,7 +384,8 @@
                     android:id="@+id/camWifiPassTxt"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Password"
+                    android:hint="@string/label_access_point_password"
+                    android:importantForAutofill="no"
                     android:inputType="textPassword" />
 
                 <TextView
@@ -337,6 +406,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/archive_ip_hint"
+                    android:importantForAutofill="no"
                     android:inputType="text" />
 
                 <TextView
@@ -350,9 +420,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/archive_user_hint"
+                    android:importantForAutofill="no"
                     android:inputType="text" />
 
                 <TextView
+                    android:id="@+id/textView2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -363,6 +435,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/archive_pass_hint"
+                    android:importantForAutofill="no"
                     android:inputType="textPassword" />
 
                 <TextView
@@ -376,6 +449,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/archive_path_hint"
+                    android:importantForAutofill="no"
                     android:inputType="text" />
 
             </LinearLayout>

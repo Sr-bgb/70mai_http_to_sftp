@@ -1,13 +1,16 @@
 <resources>
+    <string name="foreground_service_justification">The app requires a connection to the camera to download video recordings even when the screen is off.</string>
     <string name="app_name">HTTP 70MAI Dashcam Transfer</string>
     <string name="btn_start">Start</string>
-    <string name="btn_stat">Stats</string>
+    <string name="btn_stat">Statistics</string>
     <string name="btn_token">Token</string>
-    <string name="btn_info">Info</string>
     <string name="btn_stop">Stop</string>
     <string name="btn_no_sleep">No Sleep</string>
-    <string name="btn_album">Album</string>
+    <string name="btn_album">Album Mode</string>
     <string name="btn_inject">Inject</string>
+    <string name="label_reset">Reset</string>
+    <string name="label_functions">Functions</string>
+    <string name="label_network">Network</string>
     <string name="cam_settings_title">Camera Settings</string>
     <string name="cam_ip_hint">e.g. 192.168.1.1</string>
     <string name="cam_user_hint">HTTP User Number</string>
@@ -46,4 +49,6 @@
     <string name="msg_http_success">HTTP: Cycle completed</string>
     <string name="msg_sftp_success">SFTP: Files uploaded</string>
     <string name="msg_sftp_idle">SFTP: Nothing to upload</string>
+    <string name="label_access_point">70mai_d08_xxxx</string>
+    <string name="label_access_point_password">Password</string>
 </resources>
