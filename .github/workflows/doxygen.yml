@@ -28,22 +28,11 @@ jobs:
     - name: Compile LaTeX to PDF
       run: |
         cd docs/latex
-        # 1. Remove existing conflicting packages
-        sed -i '/\\usepackage\[.*\]{fontenc}/d' refman.tex
-        sed -i '/\\usepackage{fontenc}/d' refman.tex
-        sed -i '/\\usepackage\[.*\]{babel}/d' refman.tex
-        sed -i '/\\usepackage{babel}/d' refman.tex
+        # Substitute packages to support Cyrillic/UTF-8
+        sed -i 's/\[T1\]{fontenc}/[T2A,T1]{fontenc}/g' refman.tex
+        sed -i 's/\[english\]{babel}/[bulgarian,english]{babel}/g' refman.tex
         
-        # 2. Create the fix content
-        echo "\\usepackage[T2A,T1]{fontenc}" > fix.tex
-        echo "\\usepackage[utf8]{inputenc}" >> fix.tex
-        echo "\\usepackage[bulgarian,english]{babel}" >> fix.tex
-        
-        # 3. Find the line number of \documentclass and insert after it
-        # This is more reliable than assuming line 1
-        LINE_NUM=$(grep -n "\\documentclass" refman.tex | head -n 1 | cut -d: -f1)
-        sed -i "${LINE_NUM}r fix.tex" refman.tex
-
+        # Ensure pdflatex knows how to handle Unicode Cyrillic
         make
         cp refman.pdf ../70mai_Dashcam_Transfer_Docs.pdf
         cd ../..
