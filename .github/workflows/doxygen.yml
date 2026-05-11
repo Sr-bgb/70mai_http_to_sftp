@@ -28,19 +28,15 @@ jobs:
     - name: Compile LaTeX to PDF
       run: |
         cd docs/latex
-        # 1. Force the correct encodings at the very top of the file
-        # We use a temp file to safely prepend lines to refman.tex
-        echo "\\PassOptionsToPackage{T2A,T1}{fontenc}" > preamble.tmp
-        echo "\\PassOptionsToPackage{bulgarian,english}{babel}" >> preamble.tmp
-        cat refman.tex >> preamble.tmp
-        mv preamble.tmp refman.tex
-        
-        # 2. Ensure UTF-8 is handled for Cyrillic
+        # 1. Add Cyrillic/Bulgarian support by modifying the refman.tex directly
+        # We replace the standard packages with the ones supporting T2A and Bulgarian
         sed -i 's/\\usepackage\[T1\]{fontenc}/\\usepackage[T2A,T1]{fontenc}/g' refman.tex
         sed -i 's/\\usepackage\[english\]{babel}/\\usepackage[bulgarian,english]{babel}/g' refman.tex
         
-        # 3. Sometimes Doxygen misses the inputenc for the main file
-        sed -i '/\\begin{document}/i \\usepackage[utf8]{inputenc}' refman.tex
+        # 2. Add inputenc with utf8 support if not present, but do it safely inside the preamble
+        # We find the line with \begin{document} and insert just before it
+        # However, to be extra safe against "Missing \begin{document}", we avoid inserting at the end
+        # and instead use the existing package replacements.
 
         make
         cp refman.pdf ../70mai_Dashcam_Transfer_Docs.pdf
