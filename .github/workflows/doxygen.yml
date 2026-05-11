@@ -17,28 +17,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Doxygen, Graphviz and XeLaTeX
+    - name: Install Doxygen, Graphviz and LaTeX
       run: |
         sudo apt-get update
         sudo apt-get install -y doxygen graphviz \
-          texlive-xetex texlive-latex-extra texlive-fonts-recommended \
-          texlive-lang-cyrillic fonts-freefont-ttf
+          texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+          texlive-fonts-recommended texlive-fonts-extra texlive-lang-cyrillic
 
     - name: Run Doxygen
       run: doxygen Doxyfile
 
-    - name: Compile LaTeX to PDF using XeLaTeX
+    - name: Compile LaTeX to PDF
       run: |
         cd docs/latex
-        # XeLaTeX handles Unicode natively. We need to tell Doxygen's Makefile to use it.
-        # We also need to set a font that supports Cyrillic.
-        sed -i 's/\\usepackage\[T1\]{fontenc}/\\usepackage{fontspec}/g' refman.tex
-        sed -i 's/\\usepackage\[english\]{babel}/\\usepackage{polyglossia}\n\\setmainlanguage{english}\n\\setotherlanguage{bulgarian}\n\\newfontfamily\\cyrillicfont{FreeSerif}/g' refman.tex
+        # 1. Force the use of T2A (Cyrillic) and UTF-8
+        # Doxygen often puts \usepackage[T1]{fontenc}. We swap it.
+        sed -i 's/\\usepackage\[T1\]{fontenc}/\\usepackage[T2A,T1]{fontenc}/g' refman.tex
         
-        # Update Makefile to use xelatex
-        sed -i 's/pdflatex/xelatex/g' Makefile
+        # 2. Add bulgarian to babel options. Doxygen usually generates \usepackage[english]{babel}
+        sed -i 's/\\usepackage\[english\]{babel}/\\usepackage[bulgarian,english]{babel}/g' refman.tex
 
-        make
+        # 3. Create a small map to handle Cyrillic characters that might still cause issues
+        # and ensure utf8 inputenc is loaded early.
+        sed -i '/\\documentclass/a \\usepackage[utf8]{inputenc}' refman.tex
+
+        # 4. Use 'make' but ignore errors on first pass if any, then run again to fix indices
+        # pdflatex is more robust for Doxygen's default templates than xelatex
+        make || make
         cp refman.pdf ../70mai_Dashcam_Transfer_Docs.pdf
         cd ../..
 

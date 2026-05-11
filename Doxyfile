@@ -38,15 +38,15 @@ GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 
-# LaTeX settings (for PDF with UTF-8 and Cyrillic support)
+# LaTeX settings (back to pdflatex which is more compatible with Doxygen templates)
 GENERATE_LATEX         = YES
 LATEX_OUTPUT           = latex
-LATEX_CMD_NAME         = xelatex
+LATEX_CMD_NAME         = pdflatex
 MAKEINDEX_CMD_NAME     = makeindex
 COMPACT_LATEX          = YES
 PAPER_TYPE             = a4
 PDF_HYPERLINKS         = YES
-USE_PDFLATEX           = NO
+USE_PDFLATEX           = YES
 
 # Graphics and Diagrams
 HAVE_DOT               = YES
