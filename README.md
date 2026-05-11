@@ -8,7 +8,7 @@ A professional Android application designed for **70mai dashcam reverse engineer
 ### Optimized for Search Engines (SEO Keywords)
 `70mai dashcam backup`, `70mai protocol reverse engineering`, `70mai A500S video transfer`, `70mai A800S Android app`, `auto dashcam sync SFTP`, `dashcam to cloud backup`, `70mai Wi-Fi protocol`, `com.lz1bgb.camhttp`.
 
-## 🚀 Key Features
+## Key Features
 
 - **Hybrid Networking**: Automatically binds HTTP requests to the dashcam's Wi-Fi network (192.168.0.1) even when mobile data is active. This allows the app to talk to the camera and the internet (SFTP) simultaneously.
 - **70mai Protocol Implementation**: Full implementation of the reverse-engineered 70mai handshake:
@@ -22,7 +22,7 @@ A professional Android application designed for **70mai dashcam reverse engineer
 - **Background Operation**: Runs as a foreground service with a persistent notification, ensuring Android doesn't kill the process during long transfers.
 - **Statistics & Monitoring**: Real-time tracking of remaining files, download duration, and transfer status.
 
-## 🛠 Technical Implementation
+## Technical Implementation
 
 ### Networking
 The app uses `OkHttpClient` with custom `SocketFactory` binding. When a target URL contains `192.168.0.1`, the app forces the traffic through the Wi-Fi interface, bypassing the system's default route (which usually prefers mobile data when Wi-Fi has no internet).
@@ -32,7 +32,7 @@ The app uses `OkHttpClient` with custom `SocketFactory` binding. When a target U
 2. **Local Stage**: Files are stored in `/Android/data/com.lz1bgb.camhttp/files/camera/` preserving the original directory structure (e.g., `/Normal/Front/`).
 3. **Archive Stage**: If the camera is not in range, the app automatically switches to SFTP mode and uploads the local files to the configured server, deleting them locally upon success.
 
-## ⚖️ Licensing
+## Licensing
 
 This project is subject to a **Dual License** model:
 
