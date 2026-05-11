@@ -5,7 +5,7 @@
 
 A professional Android application designed for **70mai dashcam reverse engineering** and **automatic file synchronization**. It transfers videos and photos from 70mai dash cameras to a private SFTP storage via a secure Wi-Fi handshake.
 
-### 🔍 Optimized for Search Engines (SEO Keywords)
+### Optimized for Search Engines (SEO Keywords)
 `70mai dashcam backup`, `70mai protocol reverse engineering`, `70mai A500S video transfer`, `70mai A800S Android app`, `auto dashcam sync SFTP`, `dashcam to cloud backup`, `70mai Wi-Fi protocol`, `com.lz1bgb.camhttp`.
 
 ## 🚀 Key Features
