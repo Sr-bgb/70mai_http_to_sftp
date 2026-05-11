@@ -38,7 +38,7 @@ GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 
-# LaTeX settings (for PDF with UTF-8 support)
+# LaTeX settings (for PDF with UTF-8 and Cyrillic support)
 GENERATE_LATEX         = YES
 LATEX_OUTPUT           = latex
 LATEX_CMD_NAME         = pdflatex
@@ -47,10 +47,8 @@ COMPACT_LATEX          = YES
 PAPER_TYPE             = a4
 PDF_HYPERLINKS         = YES
 USE_PDFLATEX           = YES
-
-# IMPORTANT: Fix for Unicode/Cyrillic in PDF
-# We use a header file to include inputenc with utf8 and fontenc with T2A
-LATEX_HEADER           = docs_header.tex
+EXTRA_PACKAGES         = [T2A,T1]{fontenc} \
+                         [utf8]{inputenc}
 
 # Graphics and Diagrams
 HAVE_DOT               = YES
