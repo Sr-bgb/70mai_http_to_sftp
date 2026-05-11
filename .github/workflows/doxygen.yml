@@ -17,26 +17,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Doxygen and LaTeX
+    - name: Install Doxygen, Graphviz and XeLaTeX
       run: |
         sudo apt-get update
-        sudo apt-get install -y doxygen graphviz texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra texlive-lang-cyrillic
+        sudo apt-get install -y doxygen graphviz \
+          texlive-xetex texlive-latex-extra texlive-fonts-recommended \
+          texlive-lang-cyrillic fonts-freefont-ttf
 
     - name: Run Doxygen
       run: doxygen Doxyfile
 
-    - name: Compile LaTeX to PDF
+    - name: Compile LaTeX to PDF using XeLaTeX
       run: |
         cd docs/latex
-        # 1. Add Cyrillic/Bulgarian support by modifying the refman.tex directly
-        # We replace the standard packages with the ones supporting T2A and Bulgarian
-        sed -i 's/\\usepackage\[T1\]{fontenc}/\\usepackage[T2A,T1]{fontenc}/g' refman.tex
-        sed -i 's/\\usepackage\[english\]{babel}/\\usepackage[bulgarian,english]{babel}/g' refman.tex
+        # XeLaTeX handles Unicode natively. We need to tell Doxygen's Makefile to use it.
+        # We also need to set a font that supports Cyrillic.
+        sed -i 's/\\usepackage\[T1\]{fontenc}/\\usepackage{fontspec}/g' refman.tex
+        sed -i 's/\\usepackage\[english\]{babel}/\\usepackage{polyglossia}\n\\setmainlanguage{english}\n\\setotherlanguage{bulgarian}\n\\newfontfamily\\cyrillicfont{FreeSerif}/g' refman.tex
         
-        # 2. Add inputenc with utf8 support if not present, but do it safely inside the preamble
-        # We find the line with \begin{document} and insert just before it
-        # However, to be extra safe against "Missing \begin{document}", we avoid inserting at the end
-        # and instead use the existing package replacements.
+        # Update Makefile to use xelatex
+        sed -i 's/pdflatex/xelatex/g' Makefile
 
         make
         cp refman.pdf ../70mai_Dashcam_Transfer_Docs.pdf

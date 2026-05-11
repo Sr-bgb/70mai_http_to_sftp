@@ -3,7 +3,7 @@ PROJECT_NAME           = "70mai Dashcam Transfer"
 PROJECT_NUMBER         = 1.0
 OUTPUT_DIRECTORY       = docs
 CREATE_SUBDIRS         = NO
-ALLOW_UNICODE_NAMES    = NO
+ALLOW_UNICODE_NAMES    = YES
 OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
 REPEAT_BRIEF           = YES
@@ -41,12 +41,12 @@ HTML_FILE_EXTENSION    = .html
 # LaTeX settings (for PDF with UTF-8 and Cyrillic support)
 GENERATE_LATEX         = YES
 LATEX_OUTPUT           = latex
-LATEX_CMD_NAME         = pdflatex
+LATEX_CMD_NAME         = xelatex
 MAKEINDEX_CMD_NAME     = makeindex
 COMPACT_LATEX          = YES
 PAPER_TYPE             = a4
 PDF_HYPERLINKS         = YES
-USE_PDFLATEX           = YES
+USE_PDFLATEX           = NO
 
 # Graphics and Diagrams
 HAVE_DOT               = YES
