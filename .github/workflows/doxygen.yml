@@ -28,22 +28,21 @@ jobs:
     - name: Compile LaTeX to PDF
       run: |
         cd docs/latex
-        # Doxygen uses 'book' or 'article'. Let's find the line with documentclass and insert after it.
-        # We use a more robust way to insert lines to avoid breaking the syntax.
-        
         # 1. Remove existing conflicting packages
         sed -i '/\\usepackage\[.*\]{fontenc}/d' refman.tex
         sed -i '/\\usepackage{fontenc}/d' refman.tex
         sed -i '/\\usepackage\[.*\]{babel}/d' refman.tex
         sed -i '/\\usepackage{babel}/d' refman.tex
         
-        # 2. Create a temporary file with the fix and merge it
+        # 2. Create the fix content
         echo "\\usepackage[T2A,T1]{fontenc}" > fix.tex
         echo "\\usepackage[utf8]{inputenc}" >> fix.tex
         echo "\\usepackage[bulgarian,english]{babel}" >> fix.tex
         
-        # Insert fix.tex after the first line (the \documentclass line)
-        sed -i '1r fix.tex' refman.tex
+        # 3. Find the line number of \documentclass and insert after it
+        # This is more reliable than assuming line 1
+        LINE_NUM=$(grep -n "\\documentclass" refman.tex | head -n 1 | cut -d: -f1)
+        sed -i "${LINE_NUM}r fix.tex" refman.tex
 
         make
         cp refman.pdf ../70mai_Dashcam_Transfer_Docs.pdf
