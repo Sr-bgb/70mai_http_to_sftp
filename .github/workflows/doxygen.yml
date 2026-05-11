@@ -1,0 +1,39 @@
+name: Generate Documentation
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Doxygen and LaTeX
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra texlive-lang-cyrillic
+
+    - name: Run Doxygen
+      run: doxygen Doxyfile
+
+    - name: Compile LaTeX to PDF
+      run: |
+        cd docs/latex
+        make
+        cp refman.pdf ../70mai_Dashcam_Transfer_Docs.pdf
+        cd ../..
+
+    - name: Clean up LaTeX intermediate files
+      run: rm -rf docs/latex
+
+    - name: Commit and Push Documentation
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/
+        git commit -m "Update documentation [skip ci]" || echo "No changes to commit"
+        git push

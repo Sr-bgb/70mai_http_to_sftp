@@ -1,0 +1,41 @@
+# Doxyfile for 70mai Dashcam Transfer
+PROJECT_NAME           = "70mai Dashcam Transfer"
+PROJECT_NUMBER         = 1.0
+OUTPUT_DIRECTORY       = docs
+CREATE_SUBDIRS         = NO
+ALLOW_UNICODE_NAMES    = YES
+OUTPUT_LANGUAGE        = Bulgarian
+BRIEF_MEMBER_DESC      = YES
+REPEAT_BRIEF           = YES
+
+# Input settings
+INPUT                  = app/src/main README.md
+FILE_PATTERNS          = *.kt *.java *.md
+RECURSIVE              = YES
+EXTENSION_MAPPING      = kt=Java
+
+# Extraction settings
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+# Markdown settings
+USE_MDFILE_AS_MAINPAGE = README.md
+
+# HTML settings
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+
+# LaTeX settings (for PDF)
+GENERATE_LATEX         = YES
+LATEX_OUTPUT           = latex
+LATEX_CMD_NAME         = latex
+MAKEINDEX_CMD_NAME     = makeindex
+COMPACT_LATEX          = YES
+PAPER_TYPE             = a4
+PDF_HYPERLINKS         = YES
+USE_PDFLATEX           = YES
+
+# Graphics (optional, set to NO if graphviz is not available)
+HAVE_DOT               = NO
