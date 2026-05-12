@@ -202,51 +202,71 @@ class FileTransferService : Service(){
         val sortedFiles = allFiles.sortedBy { it.name }
         pendingCameraFiles = sortedFiles.size
 
-        for (file in sortedFiles) {
-            FileLogger.logToFile(this, "FileService", "Processing ${file.name} (Path: ${file.path})")
-            val parentFolder = file.path.substringAfterLast('/').ifEmpty { file.path }
-            currentFileName = "$parentFolder/${file.name}"
-            resetSpeed()
+        // Group files by the first 19 characters of their name
+        val groupedFiles = sortedFiles.groupBy { it.name.take(19) }
+
+        for ((groupKey, filesInGroup) in groupedFiles) {
+            FileLogger.logToFile(this, "FileService", "Processing group $groupKey with ${filesInGroup.size} files.")
             
-            // Construct URL
-            val downloadUrl = "http://${httpClient.cameraIp}${file.path}/${file.name}"
-            
-            // Remove /mnt/sd for local path
-            val cleanPath = file.path.removePrefix("/mnt/sd").trimStart('/')
-            val localDirFile = File(getExternalFilesDir(null), "camera/$cleanPath")
-            if (!localDirFile.exists()) localDirFile.mkdirs()
-            
-            val localPath = localDirFile.absolutePath
-            
-            httpClient.registerClient()
-            val startTime = System.currentTimeMillis()
-            val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
-                updateSpeed(bytes)
+            val successfullyDownloadedFiles = mutableListOf<FileInfo>()
+
+            for (file in filesInGroup) {
+                FileLogger.logToFile(this, "FileService", "Downloading ${file.name} (Path: ${file.path})")
+                val parentFolder = file.path.substringAfterLast('/').ifEmpty { file.path }
+                currentFileName = "$parentFolder/${file.name}"
+                resetSpeed()
+                
+                // Construct URL
+                val downloadUrl = "http://${httpClient.cameraIp}${file.path}/${file.name}"
+                
+                // Remove /mnt/sd for local path
+                val cleanPath = file.path.removePrefix("/mnt/sd").trimStart('/')
+                val localDirFile = File(getExternalFilesDir(null), "camera/$cleanPath")
+                if (!localDirFile.exists()) localDirFile.mkdirs()
+                
+                val localPath = localDirFile.absolutePath
+                
+                httpClient.registerClient()
+                val startTime = System.currentTimeMillis()
+                val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
+                    updateSpeed(bytes)
+                }
+                
+                val endTime = System.currentTimeMillis()
+                
+                if (isDownloaded) {
+                    val downloadedFile = File(localDirFile, file.name)
+                    if (downloadedFile.exists() && (downloadedFile.length() > 0)) {
+                        Log.i("FileService", "Successfully downloaded: ${file.name}")
+                        val duration = (endTime - startTime) / 1000.0
+                        saveDownloadDuration(duration)
+                        incrementDownloadCount()
+                        successfullyDownloadedFiles.add(file)
+                    } else {
+                        Log.e("FileService", "File ${file.name} is 0 bytes or missing.")
+                    }
+                } else {
+                    Log.e("FileService", "Error downloading ${file.name}. Skipping deletion for this group.")
+                }
             }
-            
-            val endTime = System.currentTimeMillis()
-            
-            if (isDownloaded) {
-                val downloadedFile = File(localDirFile, file.name)
-                if (downloadedFile.exists() && (downloadedFile.length() > 0)) {
-                    Log.i("FileService", "Successfully downloaded: ${file.name}")
-                    
-                    val duration = (endTime - startTime) / 1000.0
-                    saveDownloadDuration(duration)
-                    incrementDownloadCount()
-                    
-                    // Register before delete
+
+            // Only delete the group if ALL files in the group were successfully downloaded
+            if (successfullyDownloadedFiles.size == filesInGroup.size) {
+                FileLogger.logToFile(this, "FileService", "Group $groupKey downloaded successfully. Deleting from camera...")
+                for (file in successfullyDownloadedFiles) {
                     httpClient.registerClient()
                     val deleted = httpClient.deleteRemoteFile(file.path, file.name, token)
                     if (deleted) {
                         FileLogger.logToFile(this, "FileService", "Deleted from camera: ${file.name}")
                         if (pendingCameraFiles > 0) pendingCameraFiles--
+                    } else {
+                        Log.e("FileService", "Failed to delete ${file.name} from camera.")
                     }
-                } else {
-                    Log.e("FileService", "File ${file.name} is 0 bytes. NOT deleting from camera.")
                 }
             } else {
-                Log.e("FileService", "Error downloading ${file.name}. Skipping.")
+                FileLogger.logToFile(this, "FileService", "Group $groupKey was NOT fully downloaded. Deletion skipped.")
+                // Decrease pending count only for what we actually finished or skip
+                pendingCameraFiles -= filesInGroup.size
             }
         }
         currentFileName = ""
