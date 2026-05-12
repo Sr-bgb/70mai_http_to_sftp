@@ -36,7 +36,10 @@ enum class UploadStatus {
 }
 
 /**
- * @brief Handles uploading files to a remote SFTP server and managing local storage.
+ * Handles uploading files to a remote SFTP server and managing local storage.
+ *
+ * This class provides methods to scan local directories for files downloaded from the camera
+ * and upload them to a configured SFTP server.
  */
 class SftpUpload(private val context: Context) {
 
@@ -65,8 +68,9 @@ class SftpUpload(private val context: Context) {
 //    }
 
     /**
-     * @brief Scans the internal app storage for files downloaded from the camera.
-     * @return List of LocalFileInfo objects.
+     * Scans the internal app storage for files downloaded from the camera.
+     *
+     * @return List of [LocalFileInfo] objects.
      */
     fun getLocalFilesToUpload(): List<LocalFileInfo> {
         // Define the start folder "camera" where HttpClient downloads files
@@ -86,11 +90,11 @@ class SftpUpload(private val context: Context) {
     }
 
     /**
-     * @brief Connects to SFTP, uploads a single file preserving directory structure, and deletes local copy.
-     * 
+     * Connects to SFTP, uploads a single file preserving directory structure, and deletes local copy.
+     *
      * @param fileInfo Information about the file to upload.
      * @param onProgress Lambda for tracking upload progress.
-     * @return UploadStatus enum describing the result.
+     * @return [UploadStatus] enum describing the result.
      */
     suspend fun uploadAndDeleteFile(fileInfo: LocalFileInfo, onProgress: ((Long, Long) -> Unit)? = null): UploadStatus {
         return withContext(Dispatchers.IO) {
