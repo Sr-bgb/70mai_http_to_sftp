@@ -14,6 +14,9 @@ FILE_PATTERNS          = *.kt *.java *.md
 RECURSIVE              = YES
 EXTENSION_MAPPING      = kt=Java
 
+# Use external filter script for Kotlin files - MUCH MORE ROBUST
+FILTER_PATTERNS        = *.kt=./doxygen_filter.sh
+
 # Extraction settings
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = YES
@@ -22,6 +25,8 @@ EXTRACT_STATIC         = YES
 EXTRACT_LOCAL_CLASSES  = YES
 EXTRACT_LOCAL_METHODS  = YES
 INTERNAL_DOCS          = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
 
 # Source browsing
 SOURCE_BROWSER         = YES
@@ -38,19 +43,11 @@ GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 
-# LaTeX settings (back to pdflatex which is more compatible with Doxygen templates)
+# LaTeX settings
 GENERATE_LATEX         = NO
-LATEX_OUTPUT           = latex
-LATEX_CMD_NAME         = pdflatex
-MAKEINDEX_CMD_NAME     = makeindex
-COMPACT_LATEX          = YES
-PAPER_TYPE             = a4
-PDF_HYPERLINKS         = YES
-USE_PDFLATEX           = YES
 
-# Graphics and Diagrams
+# Graphics and Diagrams (Dot/Graphviz)
 HAVE_DOT               = YES
-DOT_PATH               =
 CLASS_GRAPH            = YES
 COLLABORATION_GRAPH    = YES
 GROUP_GRAPHS           = YES
@@ -64,8 +61,16 @@ GRAPHICAL_HIERARCHY    = YES
 DIRECTORY_GRAPH        = YES
 DOT_IMAGE_FORMAT       = svg
 INTERACTIVE_SVG        = YES
-DOT_GRAPH_MAX_NODES    = 100
+DOT_GRAPH_MAX_NODES    = 200
 MAX_DOT_GRAPH_DEPTH    = 0
 DOT_MULTI_TARGETS      = YES
 GENERATE_LEGEND        = YES
 DOT_CLEANUP            = YES
+
+# Optimization for Java/Kotlin
+OPTIMIZE_OUTPUT_JAVA   = YES
+AUTOLINK_SUPPORT       = YES
+MARKDOWN_SUPPORT       = YES
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
