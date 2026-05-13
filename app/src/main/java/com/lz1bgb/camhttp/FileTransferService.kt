@@ -198,17 +198,22 @@ class FileTransferService : Service(){
             return true
         }
 
-        // Global sort (oldest first)
-        val sortedFiles = allFiles.sortedBy { it.name }
+        // Deduplicate files and sort by name
+        val uniqueFiles = allFiles.distinctBy { "${it.path}/${it.name}" }
+        val sortedFiles = uniqueFiles.sortedBy { it.name }
         pendingCameraFiles = sortedFiles.size
 
-        // Group files by the first 19 characters of their name
-        val groupedFiles = sortedFiles.groupBy { it.name.take(19) }
+        // Group files by stripping the 70mai suffixes (F/B + extension)
+        // Example: NO20260513-055652-000046B.MP4 -> NO20260513-055652-000046
+        val groupedFiles = sortedFiles.groupBy { 
+            it.name.replace(Regex("[FB]\\.(MP4|MP4|thm|jpg|JPG)$", RegexOption.IGNORE_CASE), "")
+        }
 
         for ((groupKey, filesInGroup) in groupedFiles) {
-            FileLogger.logToFile(this, "FileService", "Processing group $groupKey with ${filesInGroup.size} files.")
+            FileLogger.logToFile(this, "FileService", "Processing group $groupKey with files: ${filesInGroup.joinToString { it.name }}")
             
             val successfullyDownloadedFiles = mutableListOf<FileInfo>()
+            var networkErrorOccurred = false
 
             for (file in filesInGroup) {
                 FileLogger.logToFile(this, "FileService", "Downloading ${file.name} (Path: ${file.path})")
@@ -228,26 +233,39 @@ class FileTransferService : Service(){
                 
                 httpClient.registerClient()
                 val startTime = System.currentTimeMillis()
-                val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
-                    updateSpeed(bytes)
-                }
                 
-                val endTime = System.currentTimeMillis()
-                
-                if (isDownloaded) {
-                    val downloadedFile = File(localDirFile, file.name)
-                    if (downloadedFile.exists() && (downloadedFile.length() > 0)) {
-                        Log.i("FileService", "Successfully downloaded: ${file.name}")
-                        val duration = (endTime - startTime) / 1000.0
-                        saveDownloadDuration(duration)
-                        incrementDownloadCount()
-                        successfullyDownloadedFiles.add(file)
-                    } else {
-                        Log.e("FileService", "File ${file.name} is 0 bytes or missing.")
+                try {
+                    val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
+                        updateSpeed(bytes)
                     }
-                } else {
-                    Log.e("FileService", "Error downloading ${file.name}. Skipping deletion for this group.")
+                    
+                    val endTime = System.currentTimeMillis()
+                    
+                    if (isDownloaded) {
+                        val downloadedFile = File(localDirFile, file.name)
+                        if (downloadedFile.exists() && (downloadedFile.length() > 0)) {
+                            Log.i("FileService", "Successfully downloaded: ${file.name}")
+                            val duration = (endTime - startTime) / 1000.0
+                            saveDownloadDuration(duration)
+                            incrementDownloadCount()
+                            successfullyDownloadedFiles.add(file)
+                        } else {
+                            Log.e("FileService", "File ${file.name} is 0 bytes or missing.")
+                        }
+                    } else {
+                        Log.e("FileService", "Error downloading ${file.name}. Group incomplete.")
+                        // If it failed but not necessarily a network drop, we still skip the group
+                    }
+                } catch (e: Exception) {
+                    FileLogger.logToFile(this, "FileService", "Critical download error: ${e.message}")
+                    networkErrorOccurred = true
+                    break // Stop processing this group
                 }
+            }
+
+            if (networkErrorOccurred) {
+                FileLogger.logToFile(this, "FileService", "Network error detected. Aborting cycle.")
+                break // Stop all groups
             }
 
             // Only delete the group if ALL files in the group were successfully downloaded
@@ -264,8 +282,8 @@ class FileTransferService : Service(){
                     }
                 }
             } else {
-                FileLogger.logToFile(this, "FileService", "Group $groupKey was NOT fully downloaded. Deletion skipped.")
-                // Decrease pending count only for what we actually finished or skip
+                FileLogger.logToFile(this, "FileService", "Group $groupKey was NOT fully downloaded (Success: ${successfullyDownloadedFiles.size}/${filesInGroup.size}). Deletion skipped.")
+                // Update pending count by removing processed group from the count to reflect UI correctly
                 pendingCameraFiles -= filesInGroup.size
             }
         }
