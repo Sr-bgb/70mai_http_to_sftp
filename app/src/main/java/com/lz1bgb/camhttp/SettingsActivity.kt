@@ -1,25 +1,25 @@
 package com.lz1bgb.camhttp
 
 import android.Manifest
-import android.app.ActivityManager
 import android.content.ComponentName
-//import android.content.Context
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-//import android.net.ConnectivityManager
-//import android.net.NetworkCapabilities
-//import android.net.NetworkRequest
-import android.net.wifi.WifiManager
-import android.net.wifi.WifiNetworkSuggestion
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.net.wifi.WifiNetworkSpecifier
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.AdapterView
@@ -146,9 +146,12 @@ class SettingsActivity : AppCompatActivity() {
             if (status.currentFileName.isNotEmpty()) {
                 binding.fileNameInProcess.text = getString(R.string.label_current_file, status.currentFileName)
                 binding.fileTransferSpeed.text = getString(R.string.label_current_speed, status.currentSpeed)
+                binding.fileProgressPercentage.text = getString(R.string.label_current_progress, status.currentProgress)
+                binding.fileProgressPercentage.visibility = View.VISIBLE
             } else {
                 binding.fileNameInProcess.text = getString(R.string.status_idle)
                 binding.fileTransferSpeed.text = getString(R.string.speed_idle)
+                binding.fileProgressPercentage.visibility = View.GONE
             }
 
             binding.statusTextView.visibility = View.VISIBLE
@@ -314,6 +317,11 @@ class SettingsActivity : AppCompatActivity() {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else {
+                val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES)
+                } else {
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
                 connectToWifi()
             }
         }
@@ -353,34 +361,224 @@ class SettingsActivity : AppCompatActivity() {
         })
     }
 
+    //Firs trial working OK but network window popup
+//    private fun connectToWifi() {
+//        val ssid = binding.camSSIDTxt.text.toString()
+//        val pass = binding.camWifiPassTxt.text.toString()
+//
+//        if (ssid.isEmpty()) {
+//            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
+//            return
+//        }
+//
+//        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            // 1. First suggest the network for auto-connection (requires password)
+//            if (pass.isNotEmpty()) {
+//                val suggestion = WifiNetworkSuggestion.Builder()
+//                    .setSsid(ssid)
+//                    .setWpa2Passphrase(pass)
+//                    .build()
+//                wifiManager.addNetworkSuggestions(listOf(suggestion))
+//            }
+//
+//            // 2. Then open the Connectivity Panel for immediate manual selection if needed
+//            val panelIntent = Intent(Settings.Panel.ACTION_WIFI)
+//            startActivity(panelIntent)
+//
+//            Toast.makeText(this, "Tap $ssid in the panel below", Toast.LENGTH_LONG).show()
+//        } else {
+//            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+//        }
+//    }
+
+    //Second trials with connection all seems OK but application go on background mode
+//    private fun connectToWifi() {
+//        val ssid = binding.camSSIDTxt.text.toString()
+//        val pass = binding.camWifiPassTxt.text.toString()
+//
+//        if (ssid.isEmpty()) {
+//            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
+//            return
+//        }
+//
+//        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            val specifier = WifiNetworkSpecifier.Builder()
+//                .setSsid(ssid)
+//                .setWpa2Passphrase(pass)
+//                .build()
+//
+//            val request = NetworkRequest.Builder()
+//                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+//                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // Allows networks without internet
+//                .setNetworkSpecifier(specifier)
+//                .build()
+//
+//            val networkCallback = object : ConnectivityManager.NetworkCallback() {
+//                override fun onAvailable(network: Network) {
+//                    super.onAvailable(network)
+//                    // CRITICAL: Force the entire application to use this network
+//                    connectivityManager.bindProcessToNetwork(network)
+//
+//                    runOnUiThread {
+//                        Toast.makeText(this@SettingsActivity, "Connected to $ssid", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//
+//                override fun onUnavailable() {
+//                    super.onUnavailable()
+//                    runOnUiThread {
+//                        Toast.makeText(this@SettingsActivity, "Camera network not found", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//            }
+//
+//            connectivityManager.requestNetwork(request, networkCallback)
+//            Toast.makeText(this, "Connecting to $ssid...", Toast.LENGTH_SHORT).show()
+//
+//        } else {
+//            // For old versions (before Android 10)
+//            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+//        }
+//    }
+
+    //Third trial again application go on background
+//    private fun connectToWifi() {
+//        val ssid = binding.camSSIDTxt.text.toString()
+//        val pass = binding.camWifiPassTxt.text.toString()
+//
+//        if (ssid.isEmpty()) {
+//            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
+//            return
+//        }
+//
+//        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            // 1. Build a specifier for the specific network
+//            val specifier = WifiNetworkSpecifier.Builder()
+//                .setSsid(ssid)
+//                .apply {
+//                    if (pass.isNotEmpty()) setWpa2Passphrase(pass)
+//                }
+//                .build()
+//
+//            // 2. Create a network request
+//            val request = NetworkRequest.Builder()
+//                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+//                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+//                .setNetworkSpecifier(specifier)
+//                .build()
+//
+//            // 3. Define what happens on connection
+//            val networkCallback = object : ConnectivityManager.NetworkCallback() {
+//                override fun onAvailable(network: Network) {
+//                    super.onAvailable(network)
+//                    // Bind the process so that HTTP requests can pass through here
+//                    connectivityManager.bindProcessToNetwork(network)
+//
+//                    runOnUiThread {
+//                        Toast.makeText(this@SettingsActivity, "Connected successfully to $ssid", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//
+//                override fun onUnavailable() {
+//                    super.onUnavailable()
+//                    runOnUiThread {
+//                        Toast.makeText(this@SettingsActivity, "Connection was refused or not found", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//            }
+//
+//            // Instead of opening the Settings Panel, we launch the request directly
+//            connectivityManager.requestNetwork(request, networkCallback)
+//
+//            // This will only show a small dialog on your screen
+//            Toast.makeText(this, "Searching for camera...", Toast.LENGTH_SHORT).show()
+//
+//        } else {
+//            // For very old versions there is no choice but settings
+//            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+//        }
+//    }
+
+    //Fourth trial application go again background
+//    private fun connectToWifi() {
+//        val ssid = binding.camSSIDTxt.text.toString()
+//        val pass = binding.camWifiPassTxt.text.toString()
+//
+//        val specifier = WifiNetworkSpecifier.Builder()
+//            .setSsid(ssid)
+//            .setWpa2Passphrase(pass)
+//            .build()
+//
+//        val request = NetworkRequest.Builder()
+//            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+//            .setNetworkSpecifier(specifier)
+//            .build()
+//
+//        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+//
+//        // requestNetwork will show a dialog OVER your application.
+//        // If you don't press anything else, the focus will return automatically.
+//        connectivityManager.requestNetwork(request, object : ConnectivityManager.NetworkCallback() {
+//            override fun onAvailable(network: Network) {
+//                connectivityManager.bindProcessToNetwork(network)
+//                // Here you can send a Broadcast to FileTransferService to start working
+//            }
+//        })
+//    }
+
     private fun connectToWifi() {
         val ssid = binding.camSSIDTxt.text.toString()
         val pass = binding.camWifiPassTxt.text.toString()
 
-        if (ssid.isEmpty()) {
-            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (ssid.isEmpty()) return
 
-        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // 1. First suggest the network for auto-connection (requires password)
-            if (pass.isNotEmpty()) {
-                val suggestion = WifiNetworkSuggestion.Builder()
-                    .setSsid(ssid)
-                    .setWpa2Passphrase(pass)
-                    .build()
-                wifiManager.addNetworkSuggestions(listOf(suggestion))
+        // Define the network
+        val specifier = WifiNetworkSpecifier.Builder()
+            .setSsid(ssid)
+            .apply {
+                if (pass.isNotEmpty()) setWpa2Passphrase(pass)
             }
+            .build()
 
-            // 2. Then open the Connectivity Panel for immediate manual selection if needed
-            val panelIntent = Intent(Settings.Panel.ACTION_WIFI)
-            startActivity(panelIntent)
-            
-            Toast.makeText(this, "Tap $ssid in the panel below", Toast.LENGTH_LONG).show()
-        } else {
-            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+        // Request to the system
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // Allows network without internet
+            .setNetworkSpecifier(specifier)
+            .build()
+
+        try {
+            // This calls a system BottomSheet, WITHOUT leaving the application
+            connectivityManager.requestNetwork(request, object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    super.onAvailable(network)
+                    connectivityManager.bindProcessToNetwork(network)
+
+                    runOnUiThread {
+                        Toast.makeText(this@SettingsActivity, "Connection successful!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onUnavailable() {
+                    super.onUnavailable()
+                    runOnUiThread {
+                        Toast.makeText(this@SettingsActivity, "Camera not found", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            })
+
+            Toast.makeText(this, "Searching for $ssid...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            FileLogger.logToFile(this, "WifiError", "Error: ${e.message}")
+            // If an error is thrown here, the NEARBY_WIFI_DEVICES permission is likely missing
         }
     }
 

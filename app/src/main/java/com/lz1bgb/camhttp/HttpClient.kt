@@ -76,9 +76,9 @@ class HttpClient(context: Context) {
      * @brief Reusable OkHttpClient instance with infinite timeouts for large file transfers.
      */
     private var client = OkHttpClient.Builder()
-        .connectTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
     private var cameraClient: OkHttpClient? = null

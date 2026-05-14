@@ -40,6 +40,7 @@
     <string name="label_pending_sftp">Оставащи за качване: %1$d</string>
     <string name="label_current_file">Файл: %1$s</string>
     <string name="label_current_speed">Скорост: %1$s</string>
+    <string name="label_current_progress">Прогрес: %1$d%%</string>
     <string name="status_running">Изпълнява се цикъл за трансфер&#8230;</string>
     <string name="status_waiting_initial">Очаква се първоначална проверка.</string>
     <string name="status_waiting_start">В очакване на стартиране.</string>

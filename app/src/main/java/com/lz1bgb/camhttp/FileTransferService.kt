@@ -38,6 +38,7 @@ data class ServiceStatus(
     val pendingSftpFiles: Int,          /**< Number of local files waiting for upload */
     val currentFileName: String,        /**< Name of the file currently being transferred */
     val currentSpeed: String,           /**< Current transfer speed (MB/s or KB/s) */
+    val currentProgress: Int,           /**< Current file transfer progress percentage (0-100) */
 )
 
 /**
@@ -104,6 +105,7 @@ class FileTransferService : Service(){
     private var pendingSftpFiles = 0
     private var currentFileName = ""
     private var currentSpeed = ""
+    private var currentProgress = 0
 
     private var lastBytes = 0L
     private var lastTime = 0L
@@ -134,13 +136,17 @@ class FileTransferService : Service(){
                     val parentFolder = fileInfo.relativePath.substringAfterLast('/').ifEmpty { fileInfo.relativePath }
                     currentFileName = "$parentFolder/${fileInfo.name}"
                     resetSpeed()
-                    sftpUpload.uploadAndDeleteFile(fileInfo) { bytes, _ ->
+                    sftpUpload.uploadAndDeleteFile(fileInfo) { bytes, total ->
                         updateSpeed(bytes)
+                        if (total > 0) {
+                            currentProgress = ((bytes * 100) / total).toInt()
+                        }
                     }
                     pendingSftpFiles--
                 }
                 currentFileName = ""
                 currentSpeed = ""
+                currentProgress = 0
                 updateStatus(null, null, getString(R.string.msg_sftp_success), "SUCCESS")
             } else {
                 updateStatus(null, null, getString(R.string.msg_sftp_idle), "IDLE")
@@ -235,8 +241,11 @@ class FileTransferService : Service(){
                 val startTime = System.currentTimeMillis()
                 
                 try {
-                    val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, _ ->
+                    val isDownloaded = httpClient.downloadFile(downloadUrl, localPath) { bytes, total ->
                         updateSpeed(bytes)
+                        if (total > 0) {
+                            currentProgress = ((bytes * 100) / total).toInt()
+                        }
                     }
                     
                     val endTime = System.currentTimeMillis()
@@ -289,6 +298,7 @@ class FileTransferService : Service(){
         }
         currentFileName = ""
         currentSpeed = ""
+        currentProgress = 0
         
         return true
     }
@@ -297,6 +307,7 @@ class FileTransferService : Service(){
         lastBytes = 0L
         lastTime = System.currentTimeMillis()
         currentSpeed = "0 KB/s"
+        currentProgress = 0
     }
 
     /**
@@ -465,7 +476,8 @@ class FileTransferService : Service(){
             totalUploads,
             pendingSftpFiles,
             currentFileName,
-            currentSpeed
+            currentSpeed,
+            currentProgress
         )
     }
 }

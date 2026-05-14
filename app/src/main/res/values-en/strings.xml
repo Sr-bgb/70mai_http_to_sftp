@@ -40,6 +40,7 @@
     <string name="label_pending_sftp">Remaining for Upload: %1$d</string>
     <string name="label_current_file">File: %1$s</string>
     <string name="label_current_speed">Speed: %1$s</string>
+    <string name="label_current_progress">Progress: %1$d%%</string>
     <string name="status_running">Transfer cycle running&#8230;</string>
     <string name="status_waiting_initial">Waiting for initial check.</string>
     <string name="status_waiting_start">Waiting to start check.</string>
