@@ -231,7 +231,7 @@ class FileTransferService : Service(){
         // Group files by stripping the 70mai suffixes (F/B + extension)
         // Example: NO20260513-055652-000046B.MP4 -> NO20260513-055652-000046
         val groupedFiles = sortedFiles.groupBy { 
-            it.name.replace(Regex("[FB]\\.(MP4|MP4|thm|jpg|JPG)$", RegexOption.IGNORE_CASE), "")
+            it.name.replace(Regex("[FB]\\.(MP4|thm|jpg|JPG)$", RegexOption.IGNORE_CASE), "")
         }
 
         for ((groupKey, filesInGroup) in groupedFiles) {

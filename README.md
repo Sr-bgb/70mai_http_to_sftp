@@ -27,6 +27,7 @@ A professional Android application designed for **70mai dashcam reverse engineer
 The ready-to-install Android application can be found in the [apk/](apk/) directory of this project.
 
 - **Latest APK**: [apk/camHttp-release-1.0.apk](apk/) (Note: Build the project to generate the latest file)
+- **Minimum Requirements**: Android 10.0 (API level 29) or higher.
 
 ## Technical Implementation
 

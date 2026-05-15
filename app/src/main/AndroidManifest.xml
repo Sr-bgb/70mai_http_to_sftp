@@ -39,7 +39,7 @@
             android:name="com.lz1bgb.camhttp.SettingsActivity"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTop"
-            noHistory="false"
+            android:noHistory="false"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

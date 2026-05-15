@@ -6,7 +6,7 @@
 3. Ensure you have granted all requested permissions (Location/Wi-Fi, Storage, Notifications) for the app to function correctly.
 
 **Supported Devices:**
-- Android 9.0 (Pie) and above (API 28+).
+- Android 10.0 (Q) and above (API 29+).
 - Optimized for devices with simultaneous Wi-Fi and Mobile Data support.
 
 ---
@@ -17,5 +17,5 @@
 3. Уверете се, че сте дали всички изискани разрешения (Местоположение/Wi-Fi, Файлове, Известия), за да работи приложението правилно.
 
 **Поддържани устройства:**
-- Android 9.0 (Pie) и по-нови (API 28+).
+- Android 10.0 (Q) и по-нови (API 29+).
 - Оптимизирано за устройства с поддръжка на едновременна работа на Wi-Fi и мобилни данни.
