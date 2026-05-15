@@ -54,8 +54,9 @@ $dokka.location:com.lz1bgb.camhttp/LocalFileInfo/fullPath/#/PointingToDeclaratio
 $dokka.location:com.lz1bgb.camhttp/LocalFileInfo/name/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-local-file-info/name.html
 $dokka.location:com.lz1bgb.camhttp/LocalFileInfo/relativePath/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-local-file-info/relative-path.html
 $dokka.location:com.lz1bgb.camhttp/ServiceStatus///PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/index.html
-$dokka.location:com.lz1bgb.camhttp/ServiceStatus/ServiceStatus/#kotlin.String#kotlin.String#kotlin.Int#kotlin.Int#kotlin.String#kotlin.String#kotlin.Int#kotlin.Int#kotlin.String#kotlin.String/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/-service-status.html
+$dokka.location:com.lz1bgb.camhttp/ServiceStatus/ServiceStatus/#kotlin.String#kotlin.String#kotlin.Int#kotlin.Int#kotlin.String#kotlin.String#kotlin.Int#kotlin.Int#kotlin.String#kotlin.String#kotlin.Int/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/-service-status.html
 $dokka.location:com.lz1bgb.camhttp/ServiceStatus/currentFileName/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/current-file-name.html
+$dokka.location:com.lz1bgb.camhttp/ServiceStatus/currentProgress/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/current-progress.html
 $dokka.location:com.lz1bgb.camhttp/ServiceStatus/currentSpeed/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/current-speed.html
 $dokka.location:com.lz1bgb.camhttp/ServiceStatus/generalStatus/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/general-status.html
 $dokka.location:com.lz1bgb.camhttp/ServiceStatus/lastDownloadDuration/#/PointingToDeclaration/app/com.lz1bgb.camhttp/-service-status/last-download-duration.html
