@@ -22,6 +22,12 @@ A professional Android application designed for **70mai dashcam reverse engineer
 - **Background Operation**: Runs as a foreground service with a persistent notification, ensuring Android doesn't kill the process during long transfers.
 - **Statistics & Monitoring**: Real-time tracking of remaining files, download duration, and transfer status.
 
+## Installation & Download
+
+The ready-to-install Android application can be found in the [apk/](apk/) directory of this project.
+
+- **Latest APK**: [apk/camHttp-release-1.0.apk](apk/) (Note: Build the project to generate the latest file)
+
 ## Technical Implementation
 
 ### Networking

@@ -65,3 +65,22 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.serialization.json)
 }
+
+tasks.register<Copy>("copyReleaseApk") {
+    from(layout.buildDirectory.dir("outputs/apk/release"))
+    include("app-release-unsigned.apk", "app-release.apk")
+    into(rootProject.file("apk"))
+    rename { "camHttp-release-1.0.apk" }
+}
+
+tasks.register<Copy>("copyDebugApk") {
+    from(layout.buildDirectory.dir("outputs/apk/debug"))
+    include("app-debug.apk")
+    into(rootProject.file("apk"))
+    rename { "camHttp-debug.apk" }
+}
+
+afterEvaluate {
+    tasks.findByName("assembleRelease")?.finalizedBy("copyReleaseApk")
+    tasks.findByName("assembleDebug")?.finalizedBy("copyDebugApk")
+}
