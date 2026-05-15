@@ -21,10 +21,6 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.io.File
 import java.util.Locale
-//import java.util.Date
-//import java.util.Calendar
-import android.content.ServiceConnection
-import android.content.ComponentName
 import kotlinx.coroutines.cancel
 
 /**
@@ -72,9 +68,6 @@ class FileTransferService : Service(){
     private val isScheduled = AtomicBoolean(false)
     private var nextExecutionTime: Long = 0L
 
-    private var fileTransferService: FileTransferService? = null
-    private var isBound = false
-
     // Binder for communication with Activity
     private val binder = LocalBinder()
 
@@ -83,19 +76,6 @@ class FileTransferService : Service(){
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
-
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as FileTransferService.LocalBinder
-            fileTransferService = binder.getService()
-            isBound = true
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            fileTransferService = null
-            isBound = false
-        }
-    }
 
     private val periodicCheck = Runnable {
         // Start the check and transfer cycle

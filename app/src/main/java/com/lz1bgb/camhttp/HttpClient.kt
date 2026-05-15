@@ -5,8 +5,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-//import java.net.HttpURLConnection
-//import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -16,7 +14,6 @@ import android.util.Log
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.io.FileOutputStream
-//import java.io.OutputStream
 import androidx.core.content.edit
 import android.net.ConnectivityManager
 import android.net.Network
@@ -482,32 +479,6 @@ class HttpClient(context: Context) {
             }
         }
     }
-
-    /**
-     * @brief Orchestrates downloading a file and deleting it only if saved correctly.
-     */
-//    suspend fun downloadAndDeleteFile(
-//        downloadUrl: String,
-//        remotePath: String,
-//        remoteName: String,
-//        destinationFolderPath: String,
-//        token: String
-//    ): Boolean {
-//        val success = downloadFile(downloadUrl, destinationFolderPath)
-//        if (success) {
-//            println("Download success. Executing deletion...")
-//            return deleteRemoteFile(remotePath, remoteName, token)
-//        }
-//        return false
-//    }
-
-    /**
-     * @brief Quick check if connected to camera Wi-Fi.
-     */
-//    fun checkAuthentication(): Boolean {
-//        updateNetworkInfo()
-//        return dhcpServerIpAddress == cameraIp
-//    }
 
     /**
      * @brief Sends a configuration request to complete an OTA firmware update process.
