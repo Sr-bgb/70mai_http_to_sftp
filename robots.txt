@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://Sr-bgb.github.io/70mai_http_to_sftp/sitemap.xml
+Sitemap: https://sr-bgb.github.io/70mai_http_to_sftp/sitemap.xml
+

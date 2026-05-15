@@ -23,6 +23,9 @@ import java.io.File
 import java.util.Locale
 //import java.util.Date
 //import java.util.Calendar
+import android.content.ServiceConnection
+import android.content.ComponentName
+import kotlinx.coroutines.cancel
 
 /**
  * @brief Data class for reporting service status to the UI.
@@ -69,6 +72,9 @@ class FileTransferService : Service(){
     private val isScheduled = AtomicBoolean(false)
     private var nextExecutionTime: Long = 0L
 
+    private var fileTransferService: FileTransferService? = null
+    private var isBound = false
+
     // Binder for communication with Activity
     private val binder = LocalBinder()
 
@@ -77,6 +83,19 @@ class FileTransferService : Service(){
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as FileTransferService.LocalBinder
+            fileTransferService = binder.getService()
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            fileTransferService = null
+            isBound = false
+        }
+    }
 
     private val periodicCheck = Runnable {
         // Start the check and transfer cycle
@@ -380,6 +399,21 @@ class FileTransferService : Service(){
         job.cancel() 
         isTaskRunning.set(false)
         nextExecutionTime = 0L
+
+        //Zeroes statistics
+        currentFileName = ""
+        currentSpeed = ""
+
+        // Critical remove from foreground
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+
+        // Critical system should fully stop the service
+        stopSelf()
         
         // Re-initialize job and scope for the next Start command
         job = SupervisorJob()
@@ -396,6 +430,8 @@ class FileTransferService : Service(){
         isScheduled.set(false)
         // Cancel all active Coroutines
         job.cancel()
+
+        scope.cancel()
         FileLogger.logToFile(this, "FileService", "Service stopped and cleaned up.")
     }
 
@@ -415,7 +451,8 @@ class FileTransferService : Service(){
         if (!isTaskRunning.get() && !isScheduled.get()) {
             handler.removeCallbacks(periodicCheck)
             isScheduled.set(true)
-            handler.post(periodicCheck) 
+            nextExecutionTime = System.currentTimeMillis() + checkInterval
+            handler.postDelayed(periodicCheck, checkInterval)
         }
 
         return START_STICKY

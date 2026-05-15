@@ -62,6 +62,22 @@ class SettingsActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
 
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            // Take service instance via  Binder-а
+            val binder = service as FileTransferService.LocalBinder
+            fileTransferService = binder.getService()
+            isBound = true
+            updateStartStopButtonUI()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            fileTransferService = null
+            isBound = false
+            updateStartStopButtonUI()
+        }
+    }
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -79,25 +95,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * @brief Connection handler for the FileTransferService.
-     */
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as FileTransferService.LocalBinder
-            fileTransferService = binder.getService()
-            isBound = true
-            updateStartStopButtonUI()
-            FileLogger.logToFile(this@SettingsActivity, "SettingsActivity", "Service connected")
-        }
-
-        override fun onServiceDisconnected(className: ComponentName) {
-            isBound = false
-            fileTransferService = null
-            updateStartStopButtonUI()
-            FileLogger.logToFile(this@SettingsActivity, "SettingsActivity", "Service disconnected")
-        }
-    }
 
     fun activateKeepScreenOn() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -122,12 +119,15 @@ class SettingsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (isBound) {
-            unbindService(connection)
+            unbindService(serviceConnection)
             isBound = false
         }
     }
 
     private fun refreshServiceStatus() {
+        if (fileTransferService == null || !isServiceRunning) {
+            binding.statusTextView.text = getString(R.string.status_waiting_start)
+        }
         if (manualServiceState == null) {
             updateStartStopButtonUI()
         }
@@ -176,6 +176,7 @@ class SettingsActivity : AppCompatActivity() {
         } else {
             binding.startStopButton.text = getString(R.string.btn_start)
             binding.startStopButton.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.toggle_start))
+            binding.statusTextView.text = getString(R.string.status_waiting_start)
         }
     }
 
@@ -196,8 +197,10 @@ class SettingsActivity : AppCompatActivity() {
         setupTabs()
 
         // Bind to service if it's already running or to allow it to be created
-        Intent(this, FileTransferService::class.java).also { intent ->
-            bindService(intent, connection, BIND_AUTO_CREATE)
+        if (isServiceRunning) {
+            Intent(this, FileTransferService::class.java).also { intent ->
+                bindService(intent, serviceConnection, BIND_AUTO_CREATE)
+            }
         }
         
         val prefs = getSharedPreferences("FtpSettings", MODE_PRIVATE)
@@ -240,22 +243,29 @@ class SettingsActivity : AppCompatActivity() {
                 }
 
                 startForegroundService(serviceIntent)
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
                 Toast.makeText(this, "Service Started.", Toast.LENGTH_SHORT).show()
             } else {
                 // STOP
                 manualServiceState = false
                 if (isBound && fileTransferService != null) {
                     fileTransferService!!.stopTransfer()
+
+                    try {
+                        unbindService(serviceConnection)
+                    } catch (e: Exception) {
+                        FileLogger.logToFile(this@SettingsActivity,"Activity", "Unbind error: ${e.message}")
+
+                    }
+
+                    isBound = false
+                    fileTransferService = null
                 }
                 stopService(serviceIntent)
+                updateStartStopButtonUI()
                 Toast.makeText(this, "Service Stopped.", Toast.LENGTH_SHORT).show()
             }
             updateStartStopButtonUI()
-            // Clear manual override after a delay to let system status take over
-//            handler.postDelayed({
-//                manualServiceState = null
-//                updateStartStopButtonUI()
-//            }, 2000)
         }
 
         binding.clrCount.setOnClickListener {
@@ -361,176 +371,6 @@ class SettingsActivity : AppCompatActivity() {
         })
     }
 
-    //Firs trial working OK but network window popup
-//    private fun connectToWifi() {
-//        val ssid = binding.camSSIDTxt.text.toString()
-//        val pass = binding.camWifiPassTxt.text.toString()
-//
-//        if (ssid.isEmpty()) {
-//            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
-//            return
-//        }
-//
-//        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            // 1. First suggest the network for auto-connection (requires password)
-//            if (pass.isNotEmpty()) {
-//                val suggestion = WifiNetworkSuggestion.Builder()
-//                    .setSsid(ssid)
-//                    .setWpa2Passphrase(pass)
-//                    .build()
-//                wifiManager.addNetworkSuggestions(listOf(suggestion))
-//            }
-//
-//            // 2. Then open the Connectivity Panel for immediate manual selection if needed
-//            val panelIntent = Intent(Settings.Panel.ACTION_WIFI)
-//            startActivity(panelIntent)
-//
-//            Toast.makeText(this, "Tap $ssid in the panel below", Toast.LENGTH_LONG).show()
-//        } else {
-//            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-//        }
-//    }
-
-    //Second trials with connection all seems OK but application go on background mode
-//    private fun connectToWifi() {
-//        val ssid = binding.camSSIDTxt.text.toString()
-//        val pass = binding.camWifiPassTxt.text.toString()
-//
-//        if (ssid.isEmpty()) {
-//            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
-//            return
-//        }
-//
-//        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            val specifier = WifiNetworkSpecifier.Builder()
-//                .setSsid(ssid)
-//                .setWpa2Passphrase(pass)
-//                .build()
-//
-//            val request = NetworkRequest.Builder()
-//                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-//                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // Allows networks without internet
-//                .setNetworkSpecifier(specifier)
-//                .build()
-//
-//            val networkCallback = object : ConnectivityManager.NetworkCallback() {
-//                override fun onAvailable(network: Network) {
-//                    super.onAvailable(network)
-//                    // CRITICAL: Force the entire application to use this network
-//                    connectivityManager.bindProcessToNetwork(network)
-//
-//                    runOnUiThread {
-//                        Toast.makeText(this@SettingsActivity, "Connected to $ssid", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//
-//                override fun onUnavailable() {
-//                    super.onUnavailable()
-//                    runOnUiThread {
-//                        Toast.makeText(this@SettingsActivity, "Camera network not found", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//            }
-//
-//            connectivityManager.requestNetwork(request, networkCallback)
-//            Toast.makeText(this, "Connecting to $ssid...", Toast.LENGTH_SHORT).show()
-//
-//        } else {
-//            // For old versions (before Android 10)
-//            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-//        }
-//    }
-
-    //Third trial again application go on background
-//    private fun connectToWifi() {
-//        val ssid = binding.camSSIDTxt.text.toString()
-//        val pass = binding.camWifiPassTxt.text.toString()
-//
-//        if (ssid.isEmpty()) {
-//            Toast.makeText(this, "SSID is required", Toast.LENGTH_SHORT).show()
-//            return
-//        }
-//
-//        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            // 1. Build a specifier for the specific network
-//            val specifier = WifiNetworkSpecifier.Builder()
-//                .setSsid(ssid)
-//                .apply {
-//                    if (pass.isNotEmpty()) setWpa2Passphrase(pass)
-//                }
-//                .build()
-//
-//            // 2. Create a network request
-//            val request = NetworkRequest.Builder()
-//                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-//                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-//                .setNetworkSpecifier(specifier)
-//                .build()
-//
-//            // 3. Define what happens on connection
-//            val networkCallback = object : ConnectivityManager.NetworkCallback() {
-//                override fun onAvailable(network: Network) {
-//                    super.onAvailable(network)
-//                    // Bind the process so that HTTP requests can pass through here
-//                    connectivityManager.bindProcessToNetwork(network)
-//
-//                    runOnUiThread {
-//                        Toast.makeText(this@SettingsActivity, "Connected successfully to $ssid", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//
-//                override fun onUnavailable() {
-//                    super.onUnavailable()
-//                    runOnUiThread {
-//                        Toast.makeText(this@SettingsActivity, "Connection was refused or not found", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//            }
-//
-//            // Instead of opening the Settings Panel, we launch the request directly
-//            connectivityManager.requestNetwork(request, networkCallback)
-//
-//            // This will only show a small dialog on your screen
-//            Toast.makeText(this, "Searching for camera...", Toast.LENGTH_SHORT).show()
-//
-//        } else {
-//            // For very old versions there is no choice but settings
-//            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-//        }
-//    }
-
-    //Fourth trial application go again background
-//    private fun connectToWifi() {
-//        val ssid = binding.camSSIDTxt.text.toString()
-//        val pass = binding.camWifiPassTxt.text.toString()
-//
-//        val specifier = WifiNetworkSpecifier.Builder()
-//            .setSsid(ssid)
-//            .setWpa2Passphrase(pass)
-//            .build()
-//
-//        val request = NetworkRequest.Builder()
-//            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-//            .setNetworkSpecifier(specifier)
-//            .build()
-//
-//        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-//
-//        // requestNetwork will show a dialog OVER your application.
-//        // If you don't press anything else, the focus will return automatically.
-//        connectivityManager.requestNetwork(request, object : ConnectivityManager.NetworkCallback() {
-//            override fun onAvailable(network: Network) {
-//                connectivityManager.bindProcessToNetwork(network)
-//                // Here you can send a Broadcast to FileTransferService to start working
-//            }
-//        })
-//    }
 
     private fun connectToWifi() {
         val ssid = binding.camSSIDTxt.text.toString()
